@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" href="./img/carteafondo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Cartéa – Ventas</title>
+  <!-- Modo app al añadir a pantalla de inicio (iOS) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cartéa">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2d5a3d">
+  <link rel="apple-touch-icon" href="./img/carteafondo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="app-loading" id="appLoading">
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:52px;display:block;">
+  <div class="al-dots"><span class="al-dot"></span><span class="al-dot"></span><span class="al-dot"></span></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+  <button class="hamburger" id="hamburgerBtn">☰</button>
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:34px;display:block;">
+  <span class="sb-badge" id="mobileBadge" style="display:none;margin-left:auto">0</span>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-inner">
+    <div class="sb-header">
+      <img src="./img/carteablanco.png" alt="Cartéa" style="height:48px;display:block;margin-bottom:.3rem;">
+      <div class="sb-name" id="sidebarNombre">Cargando…</div>
+    </div>
+    <div class="sb-divider"></div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar" id="sbAvatar">–</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sbPersona">–</div>
+          <div class="sb-user-role">Administrador</div>
+        </div>
+      </div>
+      <button class="btn-logout" id="logoutBtn">⎋ &nbsp;Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="page active">
+
+    <div class="page-hd" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <div class="page-eyebrow">Analíticas</div>
+        <div class="page-title">Ventas</div>
+        <div class="page-sub" id="rangoTxt">Cuánto vendes, cuándo y qué platos funcionan mejor</div>
+      </div>
+    </div>
+
+    <div id="lockBox" style="display:none"></div>
+
+    <div id="ventasBox" style="display:none">
+      <!-- Filtros: una sola fila, arriba de todo -->
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.2rem;">
+        <div class="seg" id="rangoSeg" role="tablist" aria-label="Periodo">
+          <button data-r="hoy" class="active">Hoy</button>
+          <button data-r="ayer">Ayer</button>
+          <button data-r="7d">7 días</button>
+          <button data-r="30d">30 días</button>
+          <button data-r="mes">Este mes</button>
+        </div>
+        <button class="btn-ghost btn-sm" id="csvBtn" style="margin-left:auto">⬇ Descargar para Excel (CSV)</button>
+      </div>
+
+      <div id="ventasContenido">
+        <div class="stats-grid">
+          <div class="stat-card gold"><div class="stat-icon">💶</div><div class="stat-label">Ventas</div><div class="stat-val" id="k-ventas">–</div><div class="stat-sub" id="k-ventas-sub">&nbsp;</div></div>
+          <div class="stat-card"><div class="stat-icon">🧾</div><div class="stat-label">Pedidos</div><div class="stat-val" id="k-pedidos">–</div><div class="stat-sub" id="k-cancel">&nbsp;</div></div>
+          <div class="stat-card green"><div class="stat-icon">🎯</div><div class="stat-label">Ticket medio</div><div class="stat-val" id="k-ticket">–</div><div class="stat-sub">por pedido</div></div>
+          <div class="stat-card"><div class="stat-icon">🍽️</div><div class="stat-label">Platos vendidos</div><div class="stat-val" id="k-platos">–</div><div class="stat-sub">unidades</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd">
+            <div><div class="card-title" id="chartTitle">Ventas por hora</div><div class="card-sub" id="chartSub">Importe vendido en cada franja</div></div>
+            <button class="btn-ghost btn-sm" id="tablaBtn" aria-pressed="false">Ver como tabla</button>
+          </div>
+          <div class="card-body" style="position:relative">
+            <div id="chartBox"></div>
+            <div id="chartTabla" style="display:none"></div>
+            <div id="tip" role="tooltip" style="display:none;position:absolute;pointer-events:none;background:var(--ink);color:#fff;border-radius:4px;padding:.4rem .6rem;font-size:.75rem;line-height:1.35;z-index:5;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.2)"></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-hd"><div><div class="card-title">Platos más vendidos</div><div class="card-sub">Ordenados por importe</div></div></div>
+            <div class="card-body p0" id="topPlatos"></div>
+          </div>
+          <div class="card">
+            <div class="card-hd"><div><div class="card-title">Por categoría</div><div class="card-sub">Qué parte de la venta viene de cada una</div></div></div>
+            <div class="card-body p0" id="porCategoria"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+
+import { initPanel, db } from './js/panel-core.js';
+import { collection, onSnapshot, query, where, Timestamp }
+  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { escapeHtml, eur, inicioJornada, jornadaMasDias, isPro, mailtoPro, ESTADO_LABEL, HORA_INICIO_JORNADA } from './js/common.js';
+
+let uid = null;
+let resto = null;
+let rango = 'hoy';
+let pedidos = [];
+let unsub = null;
+let modoTabla = false;
+let serieActual = [];   // [{label, valor, n}] lo que pinta la gráfica
+
+const DIA = 24 * 3600 * 1000;
+const eurCorto = n => eur(n).replace(/,00\s?€$/, ' €');
+
+// Los días se cuentan "de calendario" (no de 24 h exactas) para que el
+// cambio de hora de marzo/octubre no descuadre nada.
+function limites(r) {
+  const hoy = inicioJornada();
+  const manana = jornadaMasDias(hoy, 1);
+  if (r === 'hoy')  return [hoy, manana];
+  if (r === 'ayer') return [jornadaMasDias(hoy, -1), hoy];
+  if (r === '7d')   return [jornadaMasDias(hoy, -6), manana];
+  if (r === '30d')  return [jornadaMasDias(hoy, -29), manana];
+  return [new Date(hoy.getFullYear(), hoy.getMonth(), 1, HORA_INICIO_JORNADA), manana];
+}
+function numDias(desde, hasta) { let n = 0; while (jornadaMasDias(desde, n) < hasta) n++; return n; }
+
+function fechaCorta(d) { return d.toLocaleDateString('es-ES', { day:'numeric', month:'short' }); }
+function claveDia(d) { const j = inicioJornada(d); return j.getFullYear() + '-' + (j.getMonth()+1) + '-' + j.getDate(); }
+
+function suscribir() {
+  if (unsub) { unsub(); unsub = null; }
+  const [desde, hasta] = limites(rango);
+  const txt = rango === 'hoy' || rango === 'ayer'
+    ? fechaCorta(desde) + ' (de 5:00 a 5:00)'
+    : fechaCorta(desde) + ' – ' + fechaCorta(jornadaMasDias(hasta, -1));
+  document.getElementById('rangoTxt').textContent = 'Periodo: ' + txt;
+  document.getElementById('ventasContenido').style.opacity = '.5';   // se mantiene lo anterior mientras carga
+  const q = query(collection(db, 'restaurantes', uid, 'pedidos'),
+    where('timestamp', '>=', Timestamp.fromDate(desde)),
+    where('timestamp', '<', Timestamp.fromDate(hasta)));
+  unsub = onSnapshot(q, snap => {
+    pedidos = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.timestamp);
+    document.getElementById('ventasContenido').style.opacity = '';
+    render();
+  }, err => {
+    console.error(err);
+    document.getElementById('ventasContenido').style.opacity = '';
+    showToast('No se pudieron cargar las ventas', 'error');
+  });
+}
+
+function render() {
+  const validos = pedidos.filter(p => p.estado !== 'cancelado');
+  const cancelados = pedidos.length - validos.length;
+  const total = validos.reduce((s, p) => s + (Number(p.total) || 0), 0);
+  const unidades = validos.reduce((s, p) => s + (p.items || []).reduce((a, i) => a + (Number(i.qty) || 0), 0), 0);
+
+  document.getElementById('k-ventas').textContent = eurCorto(total);
+  document.getElementById('k-pedidos').textContent = validos.length;
+  document.getElementById('k-cancel').textContent = cancelados ? cancelados + ' cancelado' + (cancelados > 1 ? 's' : '') + ' (no cuentan)' : 'sin cancelaciones';
+  document.getElementById('k-ticket').textContent = validos.length ? eur(total / validos.length) : '–';
+  document.getElementById('k-platos').textContent = unidades;
+  const [desde, hasta] = limites(rango);
+  const dias = numDias(desde, hasta);
+  document.getElementById('k-ventas-sub').textContent = dias > 1 ? 'media ' + eurCorto(total / dias) + ' al día' : 'importe total';
+
+  // Serie de la gráfica: por hora (1 día) o por día (varios)
+  if (dias <= 1) {
+    document.getElementById('chartTitle').textContent = 'Ventas por hora';
+    document.getElementById('chartSub').textContent = 'Importe vendido en cada hora (la jornada va de 5:00 a 5:00)';
+    const horas = [];
+    for (let k = 0; k < 24; k++) horas.push({ label: String((HORA_INICIO_JORNADA + k) % 24).padStart(2, '0') + ':00', valor: 0, n: 0 });
+    validos.forEach(p => {
+      const h = new Date(p.timestamp.seconds * 1000).getHours();
+      const k = (h - HORA_INICIO_JORNADA + 24) % 24;
+      horas[k].valor += Number(p.total) || 0; horas[k].n++;
+    });
+    // Recorta las horas vacías del principio y del final para que se lea mejor
+    let a = horas.findIndex(x => x.n), b = 23 - [...horas].reverse().findIndex(x => x.n);
+    if (a === -1) { a = 7; b = 18; }                     // sin ventas: 12:00–23:00
+    a = Math.min(a, 7); b = Math.max(b, 18);
+    serieActual = horas.slice(a, b + 1);
+  } else {
+    document.getElementById('chartTitle').textContent = 'Ventas por día';
+    document.getElementById('chartSub').textContent = 'Importe vendido cada jornada';
+    const porDia = new Map();
+    for (let k = 0; k < dias; k++) {
+      const d = jornadaMasDias(desde, k);
+      porDia.set(claveDia(d), { label: d.toLocaleDateString('es-ES', { weekday: dias <= 7 ? 'short' : undefined, day: 'numeric', month: dias <= 7 ? undefined : 'numeric' }), valor: 0, n: 0 });
+    }
+    validos.forEach(p => {
+      const e = porDia.get(claveDia(new Date(p.timestamp.seconds * 1000)));
+      if (e) { e.valor += Number(p.total) || 0; e.n++; }
+    });
+    serieActual = [...porDia.values()];
+  }
+  pintarGrafica();
+
+  // Platos más vendidos
+  const porPlato = new Map();
+  const porCat = new Map();
+  validos.forEach(p => (p.items || []).forEach(i => {
+    const k = i.nombre || '¿?';
+    const e = porPlato.get(k) || { nombre: k, qty: 0, eur: 0 };
+    const imp = (Number(i.precio) || 0) * (Number(i.qty) || 0);
+    e.qty += Number(i.qty) || 0; e.eur += imp;
+    porPlato.set(k, e);
+    const c = i.categoria || 'Sin categoría';
+    porCat.set(c, (porCat.get(c) || 0) + imp);
+  }));
+  const top = [...porPlato.values()].sort((a, b) => b.eur - a.eur || b.qty - a.qty).slice(0, 10);
+  const maxEur = top[0]?.eur || 1;
+  document.getElementById('topPlatos').innerHTML = top.length ? top.map((t, k) => `
+    <div class="top-row">
+      <span class="top-rank">${k + 1}</span>
+      <div class="top-name">${escapeHtml(t.nombre)}<div class="top-bar"><i style="width:${Math.max(2, t.eur / maxEur * 100)}%"></i></div></div>
+      <span class="top-qty">${t.qty} ud</span>
+      <span class="top-eur">${eurCorto(t.eur)}</span>
+    </div>`).join('')
+    : '<div class="empty" style="padding:1.5rem"><div class="empty-icon">🍽️</div><strong>Sin ventas en este periodo</strong></div>';
+
+  const totalCat = [...porCat.values()].reduce((a, b) => a + b, 0) || 1;
+  const cats = [...porCat.entries()].sort((a, b) => b[1] - a[1]);
+  document.getElementById('porCategoria').innerHTML = cats.length ? cats.map(([c, v]) => `
+    <div class="top-row">
+      <div class="top-name">${escapeHtml(c)}<div class="top-bar"><i style="width:${Math.max(2, v / totalCat * 100)}%"></i></div></div>
+      <span class="top-qty">${Math.round(v / totalCat * 100)} %</span>
+      <span class="top-eur">${eurCorto(v)}</span>
+    </div>`).join('')
+    : '<div class="empty" style="padding:1.5rem"><div class="empty-icon">📊</div><strong>Sin ventas en este periodo</strong></div>';
+}
+
+/* Gráfica de barras: una sola serie (sin leyenda; el título dice qué es).
+   Barras finas, puntas redondeadas, valor solo en la barra más alta,
+   y el resto al pasar el dedo/ratón o en "Ver como tabla". */
+function pintarGrafica() {
+  const box = document.getElementById('chartBox');
+  const max = Math.max(...serieActual.map(x => x.valor), 0);
+  const iMax = serieActual.findIndex(x => x.valor === max && max > 0);
+  const ancho = box.clientWidth || 600;
+  const cada = Math.max(1, Math.ceil(serieActual.length * 46 / ancho));  // ~46 px por etiqueta: no amontonar
+  box.innerHTML = `
+    <div class="bars" role="img" aria-label="${escapeHtml(document.getElementById('chartTitle').textContent)}">
+      ${serieActual.map((x, k) => `
+        <div class="bar" tabindex="0" data-k="${k}" aria-label="${escapeHtml(x.label)}: ${escapeHtml(eur(x.valor))}">
+          ${k === iMax ? `<span class="bar-val">${escapeHtml(eurCorto(x.valor))}</span>` : ''}
+          <div class="bar-fill" style="height:${max ? Math.max(x.valor ? 2 : 0, x.valor / max * 100) : 0}%"></div>
+        </div>`).join('')}
+    </div>
+    <div class="bars-axis">${serieActual.map((x, k) => `<span>${k % cada === 0 ? escapeHtml(x.label) : ''}</span>`).join('')}</div>
+    ${max ? '' : '<div style="text-align:center;font-size:.8rem;color:var(--muted);margin-top:.6rem">Sin ventas en este periodo</div>'}`;
+
+  document.getElementById('chartTabla').innerHTML = `
+    <div style="overflow-x:auto"><table class="menu-table"><thead><tr><th>${serieActual.length && serieActual[0].label.includes(':') ? 'Hora' : 'Día'}</th><th>Pedidos</th><th>Ventas</th></tr></thead><tbody>
+      ${serieActual.map(x => `<tr><td>${escapeHtml(x.label)}</td><td>${x.n}</td><td>${escapeHtml(eur(x.valor))}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+// Tooltip (ratón, dedo y teclado)
+function mostrarTip(barEl) {
+  const x = serieActual[+barEl.dataset.k]; if (!x) return;
+  const tip = document.getElementById('tip');
+  tip.replaceChildren();
+  const v = document.createElement('b'); v.textContent = eur(x.valor);
+  const l = document.createElement('div'); l.style.opacity = '.7';
+  l.textContent = x.label + ' · ' + x.n + ' pedido' + (x.n === 1 ? '' : 's');
+  tip.append(v, l);
+  tip.style.display = 'block';
+  const body = barEl.closest('.card-body').getBoundingClientRect();
+  const r = barEl.getBoundingClientRect();
+  const left = Math.min(Math.max(r.left - body.left + r.width / 2 - tip.offsetWidth / 2, 4), body.width - tip.offsetWidth - 4);
+  tip.style.left = left + 'px';
+  tip.style.top = Math.max(r.top - body.top + r.height - barEl.querySelector('.bar-fill').offsetHeight - tip.offsetHeight - 8, 0) + 'px';
+}
+function ocultarTip() { document.getElementById('tip').style.display = 'none'; }
+const cb = document.getElementById('chartBox');
+cb.addEventListener('pointerover', e => { const b = e.target.closest('.bar'); if (b) mostrarTip(b); });
+cb.addEventListener('pointerleave', ocultarTip);
+cb.addEventListener('focusin', e => { const b = e.target.closest('.bar'); if (b) mostrarTip(b); });
+cb.addEventListener('focusout', ocultarTip);
+
+document.getElementById('tablaBtn').addEventListener('click', function () {
+  modoTabla = !modoTabla;
+  this.textContent = modoTabla ? 'Ver como gráfica' : 'Ver como tabla';
+  this.setAttribute('aria-pressed', String(modoTabla));
+  document.getElementById('chartBox').style.display = modoTabla ? 'none' : '';
+  document.getElementById('chartTabla').style.display = modoTabla ? '' : 'none';
+  ocultarTip();
+});
+
+document.getElementById('rangoSeg').addEventListener('click', e => {
+  const b = e.target.closest('[data-r]'); if (!b || b.dataset.r === rango) return;
+  rango = b.dataset.r;
+  document.querySelectorAll('#rangoSeg button').forEach(x => x.classList.toggle('active', x === b));
+  suscribir();
+});
+
+// CSV para Excel (separador ; y coma decimal, como lo espera Excel en España)
+document.getElementById('csvBtn').addEventListener('click', () => {
+  const num = n => (Number(n) || 0).toFixed(2).replace('.', ',');
+  // Lo que escriben los clientes podría empezar por "=" y Excel lo tomaría por una fórmula: se neutraliza.
+  const cel = v => { let t = String(v ?? ''); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; };
+  const filas = [['Fecha', 'Hora', 'Mesa', 'Platos', 'Unidades', 'Total (€)', 'Estado']];
+  [...pedidos].sort((a, b) => a.timestamp.seconds - b.timestamp.seconds).forEach(p => {
+    const d = new Date(p.timestamp.seconds * 1000);
+    filas.push([
+      d.toLocaleDateString('es-ES'), d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+      p.mesa, (p.items || []).map(i => i.qty + '× ' + i.nombre).join(', '),
+      (p.items || []).reduce((a, i) => a + (Number(i.qty) || 0), 0), num(p.total), ESTADO_LABEL[p.estado] || p.estado
+    ]);
+  });
+  const csv = '﻿' + filas.map(f => f.map(cel).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'cartea-ventas-' + rango + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+});
+
+initPanel().then(({ uid: u, restoData }) => {
+  uid = u; resto = restoData;
+  if (!isPro(resto)) {
+    const lock = document.getElementById('lockBox');
+    lock.style.display = '';
+    lock.innerHTML = `<div class="pro-lock">
+      <div class="pl-icon">📈</div>
+      <h3>Ventas es una función Pro</h3>
+      <p>Mira cuánto vendes cada día, a qué horas tienes más trabajo y qué platos funcionan mejor.</p>
+      <ul>
+        <li>✓ Ventas de hoy, ayer, 7 días, 30 días y del mes</li>
+        <li>✓ Ventas por hora y por día</li>
+        <li>✓ Platos más vendidos y peso de cada categoría</li>
+        <li>✓ Descarga para Excel</li>
+        <li>✓ Además: hasta 200 mesas y carta en inglés</li>
+      </ul><br>
+      <a class="btn-primary" href="${mailtoPro(resto)}">Pasar a Pro · 29 €/mes →</a>
+      <div class="form-hint" style="margin-top:.6rem">Sin permanencia. Te respondemos con los datos de pago y lo activamos en el día.</div>
+    </div>`;
+    return;
+  }
+  document.getElementById('ventasBox').style.display = '';
+  suscribir();
+});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" href="./img/carteafondo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Cartéa – Vista de cocina</title>
+  <!-- Modo app al añadir a pantalla de inicio (iOS) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cartéa">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2d5a3d">
+  <link rel="apple-touch-icon" href="./img/carteafondo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/panel.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="app-loading" id="appLoading">
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:52px;display:block;">
+  <div class="al-dots"><span class="al-dot"></span><span class="al-dot"></span><span class="al-dot"></span></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+  <button class="hamburger" id="hamburgerBtn">☰</button>
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:34px;display:block;">
+  <span class="sb-badge" id="mobileBadge" style="display:none;margin-left:auto">0</span>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-inner">
+    <div class="sb-header">
+      <img src="./img/carteablanco.png" alt="Cartéa" style="height:48px;display:block;margin-bottom:.3rem;">
+      <div class="sb-name" id="sidebarNombre">Cargando…</div>
+    </div>
+    <div class="sb-divider"></div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar" id="sbAvatar">–</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sbPersona">–</div>
+          <div class="sb-user-role">Administrador</div>
+        </div>
+      </div>
+      <button class="btn-logout" id="logoutBtn">⎋ &nbsp;Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="page active">
+
+    <div class="page-hd">
+      <div class="page-eyebrow">Equipo</div>
+      <div class="page-title">Pantalla de cocina</div>
+      <div class="page-sub">Para la tablet o pantalla de la pared de cocina: los pedidos entran solos, con sonido</div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Abrir en la tablet de cocina</div></div>
+        <div class="card-body">
+          <div style="display:flex;gap:1.2rem;align-items:center;flex-wrap:wrap;">
+            <div id="cocinaQr" style="background:#fff;padding:.6rem;border:1px solid var(--border);border-radius:4px;"></div>
+            <div style="flex:1;min-width:200px;font-size:.82rem;color:var(--muted);line-height:1.6;">
+              <b style="color:var(--ink)">Opción 1:</b> escanea este QR con la tablet.<br>
+              <b style="color:var(--ink)">Opción 2:</b> copia el enlace y ábrelo allí.
+            </div>
+          </div>
+          <div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap;">
+            <button class="btn-primary" id="openCocinaBtn">🍳 Abrir aquí →</button>
+            <button class="btn-ghost" id="copyCocinaBtn">📋 Copiar enlace</button>
+          </div>
+          <p style="font-size:.78rem;color:var(--muted);margin-top:.9rem;font-weight:300;line-height:1.6;">💡 Al abrirla, pulsa <b>"Activar sonido y empezar"</b>. La pantalla se mantiene encendida mientras esté abierta. Los pedidos listos desaparecen de la pantalla a los 45 s, pero se guardan para tus ventas.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Vista previa en tiempo real</div><div class="card-sub">Lo mismo que ve el equipo de cocina</div></div>
+        <div class="card-body">
+          <div class="cocina-preview-grid" id="cocinaPreviewGrid" style="grid-template-columns:1fr;"><div class="empty"><div class="empty-icon">🍳</div><strong>Sin pedidos activos</strong><span>Aparecerán aquí</span></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+
+import { initPanel, db, baseUrl } from './js/panel-core.js';
+import { collection, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { escapeHtml, horaDe, ESTADO_LABEL } from './js/common.js';
+
+function renderCocinaPreview(activos) {
+  const el = document.getElementById('cocinaPreviewGrid');
+  if (!activos.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🍳</div><strong>Sin pedidos en cocina</strong><span>Aparecerán aquí</span></div>';
+    return;
+  }
+  el.innerHTML = activos.map(p => `
+    <div class="order-card ${p.estado}" style="margin-bottom:0">
+      <div class="order-top"><span class="order-mesa">Mesa ${escapeHtml(p.mesa)}</span><span class="order-time">${horaDe(p.timestamp)}</span></div>
+      <div class="order-items-list">${(p.items||[]).map(i=>`<div class="order-item-row"><span class="order-qty">${Number(i.qty)||0}×</span><span>${escapeHtml(i.nombre)}</span></div>`).join('')}</div>
+      ${p.nota ? `<div class="order-nota">📝 ${escapeHtml(p.nota)}</div>` : ''}
+      <div style="margin-top:.5rem;"><span class="badge ${p.estado==='nuevo'?'badge-rust':'badge-gold'}">${escapeHtml(ESTADO_LABEL[p.estado]||p.estado)}</span></div>
+    </div>`).join('');
+}
+
+initPanel().then(({ uid }) => {
+  const cUrl = baseUrl + 'cocina.html?uid=' + encodeURIComponent(uid);
+  new QRCode(document.getElementById('cocinaQr'), { text: cUrl, width: 120, height: 120, colorDark:'#0f0e0b', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
+
+  onSnapshot(query(collection(db, 'restaurantes', uid, 'pedidos'), where('estado','in',['nuevo','preparando'])), snap => {
+    const activos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a,b) => (a.timestamp?.seconds||0) - (b.timestamp?.seconds||0));
+    renderCocinaPreview(activos);
+  });
+
+  document.getElementById('openCocinaBtn').addEventListener('click', () => window.open(cUrl, '_blank'));
+  document.getElementById('copyCocinaBtn').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(cUrl); showToast('Enlace copiado ✓', 'success'); }
+    catch (e) { prompt('Copia este enlace:', cUrl); }
+  });
+});
+
+</script>
+</body>
+</html>

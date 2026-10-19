@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" href="./img/carteafondo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Cartéa – Resumen</title>
+  <!-- Modo app al añadir a pantalla de inicio (iOS) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cartéa">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2d5a3d">
+  <link rel="apple-touch-icon" href="./img/carteafondo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="app-loading" id="appLoading">
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:52px;display:block;">
+  <div class="al-dots"><span class="al-dot"></span><span class="al-dot"></span><span class="al-dot"></span></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+  <button class="hamburger" id="hamburgerBtn">☰</button>
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:34px;display:block;">
+  <span class="sb-badge" id="mobileBadge" style="display:none;margin-left:auto">0</span>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-inner">
+    <div class="sb-header">
+      <img src="./img/carteablanco.png" alt="Cartéa" style="height:48px;display:block;margin-bottom:.3rem;">
+      <div class="sb-name" id="sidebarNombre">Cargando…</div>
+    </div>
+    <div class="sb-divider"></div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar" id="sbAvatar">–</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sbPersona">–</div>
+          <div class="sb-user-role">Administrador</div>
+        </div>
+      </div>
+      <button class="btn-logout" id="logoutBtn">⎋ &nbsp;Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="page active">
+
+    <div class="page-hd">
+      <div class="page-eyebrow">Panel principal</div>
+      <div class="page-title" id="resumenTitle">Buen día</div>
+      <div class="page-sub" id="resumenFecha"></div>
+    </div>
+
+    <div class="card" id="onboardingCard" style="display:none;margin-bottom:1.2rem;border:1px solid var(--gold);">
+      <div class="card-hd"><div><div class="card-title">👋 Primeros pasos</div><div class="card-sub">Completa esto para empezar a recibir pedidos</div></div></div>
+      <div class="card-body p0" id="onboardingList"></div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card green"><div class="stat-icon">⚡</div><div class="stat-label">Pedidos activos</div><div class="stat-val" id="s-activos">0</div><div class="stat-sub">en este momento</div></div>
+      <div class="stat-card"><div class="stat-icon">🧾</div><div class="stat-label">Pedidos hoy</div><div class="stat-val" id="s-pedidos">0</div><div class="stat-sub" id="s-ticket">ticket medio –</div></div>
+      <div class="stat-card gold"><div class="stat-icon">💶</div><div class="stat-label">Ventas hoy</div><div class="stat-val" id="s-ventas">0 €</div><div class="stat-sub">desde las 5:00</div></div>
+      <div class="stat-card rust"><div class="stat-icon">🔔</div><div class="stat-label">Avisos pendientes</div><div class="stat-val" id="s-avisos">0</div><div class="stat-sub">por atender</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-hd"><div><div class="card-title">Pedidos activos</div><div class="card-sub">En tiempo real</div></div><a href="panel-pedidos.html" class="btn-ghost btn-sm">Ver todos →</a></div>
+        <div class="card-body p0" id="resumenPedidos"><div class="empty" style="padding:2rem"><div class="empty-icon">⏳</div><strong>Sin pedidos activos</strong><span>Aparecerán aquí</span></div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div><div class="card-title">Actividad de hoy</div><div class="card-sub">Lo último que ha pasado</div></div></div>
+        <div class="card-body" id="activityFeed"><div class="empty"><div class="empty-icon">📋</div><strong>Sin actividad</strong><span>Los eventos aparecerán aquí</span></div></div>
+      </div>
+    </div>
+
+    <div class="card" id="planCard" style="display:none;"></div>
+
+  </div>
+</div>
+
+<script type="module">
+
+import { initPanel, db } from './js/panel-core.js';
+import { collection, onSnapshot, getDocs, query, where, Timestamp, doc, updateDoc }
+  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { escapeHtml, eur, horaDe, inicioJornada, alCambiarJornada, usaBarra, ESTADOS_ACTIVOS, ESTADO_LABEL, isPro, mailtoPro, LIMITE_MESAS_BASICO } from './js/common.js';
+import { sincronizarAccesos } from './js/accesos.js';
+
+let activos = [];
+let jornada = [];
+let avisos = [];
+
+function badgeCls(e) { return e==='nuevo'?'badge-rust':e==='preparando'?'badge-gold':'badge-green'; }
+
+function render() {
+  const validos = jornada.filter(p => p.estado !== 'cancelado');
+  const ventas = validos.reduce((s,p) => s + (Number(p.total)||0), 0);
+
+  document.getElementById('s-activos').textContent = activos.length;
+  document.getElementById('s-pedidos').textContent = validos.length;
+  document.getElementById('s-ventas').textContent = eur(ventas).replace(/,00\s?€$/, ' €');
+  document.getElementById('s-ticket').textContent = validos.length ? 'ticket medio ' + eur(ventas / validos.length) : 'ticket medio –';
+  document.getElementById('s-avisos').textContent = avisos.length;
+
+  const rp = document.getElementById('resumenPedidos');
+  rp.innerHTML = !activos.length
+    ? '<div class="empty" style="padding:2rem"><div class="empty-icon">⏳</div><strong>Sin pedidos activos</strong><span>Aparecerán aquí en tiempo real</span></div>'
+    : activos.slice(0,6).map(p => `
+      <div style="display:flex;align-items:center;gap:.8rem;padding:.8rem 1.2rem;border-bottom:1px solid var(--border);">
+        <div style="width:3px;align-self:stretch;border-radius:2px;background:${p.estado==='nuevo'?'var(--rust)':p.estado==='preparando'?'var(--gold)':'var(--green)'}"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:.875rem;">Mesa ${escapeHtml(p.mesa)}</div>
+          <div style="font-size:.75rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml((p.items||[]).map(i=>`${i.qty}× ${i.nombre}`).join(' · '))}</div>
+        </div>
+        <span class="badge ${badgeCls(p.estado)}">${escapeHtml(ESTADO_LABEL[p.estado]||p.estado)}</span>
+        <span style="font-family:'Playfair Display',serif;font-weight:700;font-size:.95rem;color:var(--green);white-space:nowrap">${eur(p.total)}</span>
+      </div>`).join('');
+
+  const items = [];
+  jornada.forEach(p => {
+    const tipo = p.estado === 'completado' ? 'completado' : 'nuevo';
+    const txt = p.estado === 'cancelado' ? 'pedido cancelado' : p.estado === 'completado' ? 'pedido servido' : 'pedido ' + (ESTADO_LABEL[p.estado]||p.estado).toLowerCase();
+    items.push({ type: tipo, text: `Mesa ${p.mesa} — ${txt} (${eur(p.total)})`, ts: p.timestamp });
+  });
+  avisos.forEach(a => items.push({ type:'aviso', text:`Mesa ${a.mesa} — ${a.tipo==='camarero'?'llama al camarero':'pide la cuenta'}`, ts:a.timestamp }));
+  items.sort((a,b) => (b.ts?.seconds||0)-(a.ts?.seconds||0));
+  const el = document.getElementById('activityFeed');
+  el.innerHTML = !items.length
+    ? '<div class="empty"><div class="empty-icon">📋</div><strong>Sin actividad hoy</strong></div>'
+    : items.slice(0,15).map(i => `
+      <div class="activity-item">
+        <div class="activity-dot ${i.type}"></div>
+        <div class="activity-text">${escapeHtml(i.text)}</div>
+        <div class="activity-time">${horaDe(i.ts)}</div>
+      </div>`).join('');
+}
+
+function renderOnboarding(restoData, menuCount, workerCount) {
+  const steps = [
+    { done: menuCount > 3, icon: '📋', text: 'Añade tus platos a la carta (con precio y alérgenos)', href: 'panel-menu.html' },
+    { done: !!restoData.mesasConfiguradas, icon: '🪑', text: 'Indica cuántas mesas tienes', href: 'panel-mesas.html' },
+    { done: workerCount > 0, icon: '👥', text: 'Da de alta a tu equipo (cada uno con su PIN)', href: 'panel-equipo.html' },
+    { done: !!restoData.qrImpresos, icon: '⬛', text: 'Descarga e imprime los códigos QR de tus mesas', href: 'panel-qr.html' },
+  ];
+  const pending = steps.filter(s => !s.done);
+  const card = document.getElementById('onboardingCard');
+  if (!pending.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  document.getElementById('onboardingList').innerHTML = pending.map(s => `
+    <a href="${s.href}" style="display:flex;align-items:center;gap:.8rem;padding:.8rem 1.2rem;border-bottom:1px solid var(--border);text-decoration:none;color:inherit;">
+      <div style="font-size:1.2rem;">${s.icon}</div>
+      <div style="flex:1;font-size:.875rem;font-weight:600;">${s.text}</div>
+      <div style="color:var(--muted);font-size:.8rem;">Ir →</div>
+    </a>`).join('');
+}
+
+function renderPlan(restoData) {
+  if (isPro(restoData)) return;
+  const card = document.getElementById('planCard');
+  card.style.display = '';
+  card.innerHTML = `<div class="card-body" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+    <div style="font-size:1.6rem;">⭐</div>
+    <div style="flex:1;min-width:220px;">
+      <div style="font-weight:700;font-size:.9rem;">Estás en el plan Básico</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-top:.2rem;line-height:1.5;">Hasta ${LIMITE_MESAS_BASICO} mesas. Con Pro (29 €/mes): hasta 200 mesas, página de Ventas con estadísticas y la carta también en inglés.</div>
+    </div>
+    <a class="btn-primary" href="${mailtoPro(restoData)}">Pasar a Pro →</a>
+  </div>`;
+}
+
+initPanel().then(({ uid, restoData }) => {
+  const h = new Date().getHours();
+  const greet = h < 6 ? 'Buenas noches' : h < 13 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches';
+  document.getElementById('resumenTitle').textContent = greet + ', ' + (restoData.persona||restoData.nombre);
+  document.getElementById('resumenFecha').textContent = new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  renderPlan(restoData);
+
+  Promise.all([
+    getDocs(collection(db, 'restaurantes', uid, 'menu')),
+    getDocs(collection(db, 'restaurantes', uid, 'trabajadores'))
+  ]).then(([menuSnap, workersSnap]) => {
+    renderOnboarding(restoData, menuSnap.size, workersSnap.size);
+    // Mantiene al día las huellas de PIN del equipo (ver js/accesos.js)
+    const workers = workersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    sincronizarAccesos(uid, workers).catch(e => console.warn('accesos:', e));
+    const hay = workers.some(w => w.activo && w.rol === 'barra');
+    if (usaBarra(restoData) !== hay) updateDoc(doc(db, 'restaurantes', uid), { hayBarra: hay }).catch(()=>{});
+  }).catch(() => {});
+
+  const pedidosRef = collection(db, 'restaurantes', uid, 'pedidos');
+  onSnapshot(query(pedidosRef, where('estado','in',ESTADOS_ACTIVOS)), snap => {
+    activos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a,b) => (a.timestamp?.seconds||0) - (b.timestamp?.seconds||0));
+    render();
+  });
+  // "Hoy" se renueva solo a las 5:00 aunque la página siga abierta
+  let unsubJ = null;
+  const suscribirJornada = () => {
+    if (unsubJ) unsubJ();
+    unsubJ = onSnapshot(query(pedidosRef, where('timestamp','>=', Timestamp.fromDate(inicioJornada()))), snap => {
+      jornada = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    });
+  };
+  suscribirJornada();
+  alCambiarJornada(suscribirJornada);
+  onSnapshot(collection(db, 'restaurantes', uid, 'avisos'), snap => {
+    avisos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a,b) => (b.timestamp?.seconds||0) - (a.timestamp?.seconds||0));
+    render();
+  });
+});
+
+</script>
+</body>
+</html>

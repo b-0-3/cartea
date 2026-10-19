@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" href="./img/carteafondo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Cartéa – Avisos</title>
+  <!-- Modo app al añadir a pantalla de inicio (iOS) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cartéa">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2d5a3d">
+  <link rel="apple-touch-icon" href="./img/carteafondo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="app-loading" id="appLoading">
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:52px;display:block;">
+  <div class="al-dots"><span class="al-dot"></span><span class="al-dot"></span><span class="al-dot"></span></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+  <button class="hamburger" id="hamburgerBtn">☰</button>
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:34px;display:block;">
+  <span class="sb-badge" id="mobileBadge" style="display:none;margin-left:auto">0</span>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-inner">
+    <div class="sb-header">
+      <img src="./img/carteablanco.png" alt="Cartéa" style="height:48px;display:block;margin-bottom:.3rem;">
+      <div class="sb-name" id="sidebarNombre">Cargando…</div>
+    </div>
+    <div class="sb-divider"></div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar" id="sbAvatar">–</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sbPersona">–</div>
+          <div class="sb-user-role">Administrador</div>
+        </div>
+      </div>
+      <button class="btn-logout" id="logoutBtn">⎋ &nbsp;Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="page active">
+
+    <div class="page-hd">
+      <div class="page-eyebrow">Alertas de sala</div>
+      <div class="page-title">Avisos de mesas</div>
+      <div class="page-sub">Llamadas al camarero y solicitudes de cuenta</div>
+    </div>
+    <div class="stats-grid" id="avisosStats">
+      <div class="stat-card rust"><div class="stat-icon">🔔</div><div class="stat-label">Llamadas camarero</div><div class="stat-val" id="av-camareros">0</div></div>
+      <div class="stat-card gold"><div class="stat-icon">🧾</div><div class="stat-label">Peticiones de cuenta</div><div class="stat-val" id="av-cuentas">0</div></div>
+      <div class="stat-card"><div class="stat-icon">⏱</div><div class="stat-label">Total pendientes</div><div class="stat-val" id="av-total">0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title">Avisos pendientes</div>
+        <button class="btn-ghost btn-sm" id="clearAvisosBtn">Marcar todos como atendidos</button>
+      </div>
+      <div class="card-body" id="avisosList"><div class="empty"><div class="empty-icon">👍</div><strong>Todo tranquilo</strong><span>Sin avisos pendientes</span></div></div>
+    </div>
+
+  </div>
+</div>
+
+<style>#avisosStats{grid-template-columns:repeat(3,1fr);} @media(max-width:600px){#avisosStats{grid-template-columns:1fr 1fr;}}</style>
+<script type="module">
+
+import { initPanel, db } from './js/panel-core.js';
+import { collection, onSnapshot, doc, deleteDoc, writeBatch }
+  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { escapeHtml, horaDe } from './js/common.js';
+
+let uid = null;
+let allAvisos = [];
+
+function hace(ts) {
+  if (!ts?.seconds) return '';
+  const min = Math.floor((Date.now()/1000 - ts.seconds) / 60);
+  return min < 1 ? 'ahora mismo' : min === 1 ? 'hace 1 min' : `hace ${min} min`;
+}
+
+function render() {
+  document.getElementById('av-camareros').textContent = allAvisos.filter(a => a.tipo==='camarero').length;
+  document.getElementById('av-cuentas').textContent = allAvisos.filter(a => a.tipo==='cuenta').length;
+  document.getElementById('av-total').textContent = allAvisos.length;
+
+  const el = document.getElementById('avisosList');
+  el.innerHTML = !allAvisos.length
+    ? '<div class="empty"><div class="empty-icon">👍</div><strong>Todo tranquilo</strong><span>Sin avisos pendientes</span></div>'
+    : allAvisos.map(a => `
+      <div class="aviso ${a.tipo==='cuenta'?'cuenta':'camarero'}">
+        <div>
+          <div class="aviso-label">${a.tipo==='camarero'?'🔔 Llamada al camarero':'🧾 Solicitud de cuenta'} — Mesa ${escapeHtml(a.mesa)}</div>
+          <div class="aviso-time">${horaDe(a.timestamp)} · ${hace(a.timestamp)}</div>
+        </div>
+        <button class="btn-sm btn-success-sm" data-ok="${escapeHtml(a.id)}">✓ Atendido</button>
+      </div>`).join('');
+}
+
+document.getElementById('avisosList').addEventListener('click', async e => {
+  const b = e.target.closest('[data-ok]'); if (!b) return;
+  try { await deleteDoc(doc(db,'restaurantes',uid,'avisos',b.dataset.ok)); }
+  catch (err) { showToast('No se pudo actualizar', 'error'); }
+});
+
+initPanel().then(({ uid: u }) => {
+  uid = u;
+  onSnapshot(collection(db, 'restaurantes', uid, 'avisos'), snap => {
+    allAvisos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a,b) => (b.timestamp?.seconds||0) - (a.timestamp?.seconds||0));
+    render();
+  });
+  setInterval(render, 30000); // refresca el "hace X min"
+
+  document.getElementById('clearAvisosBtn').addEventListener('click', async () => {
+    if (!allAvisos.length) return;
+    if (!confirm('¿Marcar todos los avisos como atendidos?')) return;
+    const batch = writeBatch(db);
+    allAvisos.forEach(a => batch.delete(doc(db,'restaurantes',uid,'avisos',a.id)));
+    await batch.commit();
+    showToast('Avisos atendidos ✓', 'success');
+  });
+});
+
+</script>
+</body>
+</html>

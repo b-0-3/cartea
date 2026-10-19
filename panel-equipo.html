@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" href="./img/carteafondo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Cartéa – Equipo</title>
+  <!-- Modo app al añadir a pantalla de inicio (iOS) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cartéa">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2d5a3d">
+  <link rel="apple-touch-icon" href="./img/carteafondo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/panel.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="app-loading" id="appLoading">
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:52px;display:block;">
+  <div class="al-dots"><span class="al-dot"></span><span class="al-dot"></span><span class="al-dot"></span></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+  <button class="hamburger" id="hamburgerBtn">☰</button>
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:34px;display:block;">
+  <span class="sb-badge" id="mobileBadge" style="display:none;margin-left:auto">0</span>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-inner">
+    <div class="sb-header">
+      <img src="./img/carteablanco.png" alt="Cartéa" style="height:48px;display:block;margin-bottom:.3rem;">
+      <div class="sb-name" id="sidebarNombre">Cargando…</div>
+    </div>
+    <div class="sb-divider"></div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar" id="sbAvatar">–</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sbPersona">–</div>
+          <div class="sb-user-role">Administrador</div>
+        </div>
+      </div>
+      <button class="btn-logout" id="logoutBtn">⎋ &nbsp;Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="page active">
+
+    <div class="page-hd" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <div class="page-eyebrow">Gestión de personal</div>
+        <div class="page-title">Equipo de trabajo</div>
+        <div class="page-sub">Crea perfiles con acceso por PIN según el rol de cada trabajador</div>
+      </div>
+      <button class="btn-primary" id="addWorkerBtn">＋ Nuevo trabajador</button>
+    </div>
+
+    <div id="rulesNotice" style="display:none;background:var(--rust-bg);border:1px solid rgba(194,74,43,.25);border-left:4px solid var(--rust);border-radius:4px;padding:1rem 1.2rem;margin-bottom:1.2rem;font-size:.82rem;line-height:1.6;">
+      <b style="color:var(--rust)">⚠️ Sin permiso para leer el equipo.</b> Publica las reglas de seguridad nuevas (archivo <code>firestore.rules</code>) en Firebase Console → Firestore Database → Reglas.
+    </div>
+
+    <div class="stats-grid" id="equipoStats">
+      <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">Total equipo</div><div class="stat-val" id="eq-total">0</div></div>
+      <div class="stat-card"><div class="stat-icon">🍽️</div><div class="stat-label">Camareros</div><div class="stat-val" id="eq-camarero">0</div></div>
+      <div class="stat-card"><div class="stat-icon">🍺</div><div class="stat-label">Barra</div><div class="stat-val" id="eq-barra">0</div></div>
+      <div class="stat-card"><div class="stat-icon">👔</div><div class="stat-label">Encargados</div><div class="stat-val" id="eq-encargado">0</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div><div class="card-title">Acceso para trabajadores</div><div class="card-sub">Cada uno entra con su PIN</div></div>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;gap:1.2rem;align-items:center;flex-wrap:wrap;">
+          <div id="workerQr" style="background:#fff;padding:.6rem;border:1px solid var(--border);border-radius:4px;"></div>
+          <div style="flex:1;min-width:200px;font-size:.82rem;color:var(--muted);line-height:1.6;">
+            Cada trabajador escanea este QR con su móvil (o abre el enlace) y entra con <b style="color:var(--ink)">su PIN</b>.<br>
+            Consejo: que lo guarden en la pantalla de inicio para tenerlo como una app.
+          </div>
+        </div>
+        <div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap;">
+          <button class="btn-primary" id="openWorkerUrlBtn">👥 Abrir acceso del equipo →</button>
+          <button class="btn-ghost" id="copyWorkerUrlBtn">📋 Copiar enlace</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div><div class="card-title">Notas para el equipo</div><div class="card-sub">Las verán todos en su perfil personal (icono 👤 arriba de cada pantalla)</div></div>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;gap:.6rem;">
+          <input type="text" id="notaInput" maxlength="300" placeholder="Ej: Recordad revisar el stock de refrescos antes de cerrar" style="flex:1;border:1px solid var(--border);background:#fff;padding:.6rem .9rem;border-radius:4px;font-size:.85rem;font-family:'DM Sans',sans-serif;"/>
+          <button class="btn-primary" id="notaPublicarBtn">Publicar</button>
+        </div>
+        <div id="notasList" style="margin-top:1rem;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title">Trabajadores</div>
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="workerSearch" placeholder="Buscar…" style="border:1px solid var(--border);background:#fff;padding:.38rem .75rem;border-radius:3px;font-size:.8rem;font-family:'DM Sans',sans-serif;width:160px;"/>
+          <select id="workerRolFilter" style="border:1px solid var(--border);background:#fff;padding:.38rem .75rem;border-radius:3px;font-size:.8rem;font-family:'DM Sans',sans-serif;">
+            <option value="">Todos los roles</option>
+            <option value="camarero">Camarero</option>
+            <option value="barra">Barra</option>
+            <option value="encargado">Encargado</option>
+            <option value="limpieza">Limpieza</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-body p0">
+        <div style="overflow-x:auto"><table class="worker-table">
+          <thead><tr><th style="width:44px"></th><th>Trabajador</th><th>Rol</th><th>PIN</th><th style="width:60px;text-align:center">Activo</th><th style="width:100px"></th></tr></thead>
+          <tbody id="workerTbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL TRABAJADOR -->
+<div class="modal-overlay" id="workerModal">
+  <div class="modal" style="max-width:520px;">
+    <button class="modal-close" id="workerModalClose">×</button>
+    <div class="modal-title" id="workerModalTitle">Nuevo trabajador</div>
+
+    <div id="workerStep1">
+      <div class="form-row">
+        <div class="field"><label>Nombre *</label><input type="text" id="wNombre" placeholder="María"/></div>
+        <div class="field"><label>Apellidos</label><input type="text" id="wApellidos" placeholder="García López"/></div>
+      </div>
+
+      <div class="field"><label>Selecciona el rol *</label></div>
+      <div class="roles-grid" id="rolesGrid">
+        <div class="rol-card" data-rol="camarero">
+          <div class="rol-icon">🍽️</div>
+          <div class="rol-name">Camarero</div>
+          <div class="rol-desc">Ve las mesas, pedidos activos y atiende avisos de clientes</div>
+        </div>
+        <div class="rol-card" data-rol="barra">
+          <div class="rol-icon">🍺</div>
+          <div class="rol-name">Barra</div>
+          <div class="rol-desc">Pedidos de bebidas y categoría de barra filtrados</div>
+        </div>
+        <div class="rol-card" data-rol="encargado">
+          <div class="rol-icon">👔</div>
+          <div class="rol-name">Encargado</div>
+          <div class="rol-desc">Visión completa: pedidos, mesas, avisos y ventas del día</div>
+        </div>
+        <div class="rol-card" data-rol="limpieza">
+          <div class="rol-icon">🧹</div>
+          <div class="rol-name">Limpieza</div>
+          <div class="rol-desc">Estado de mesas y marcado de zonas limpias</div>
+        </div>
+      </div>
+      <div class="form-hint" style="margin-top:.6rem;">💡 Cocina no tiene acceso por móvil — usan la pantalla de pared en "Vista cocina", pensada para no tener que tocar el teléfono mientras cocinan.</div>
+
+      <div class="field" style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <label style="margin:0;">Activo desde el primer día</label>
+          <div class="form-hint" style="margin-top:.1rem;">Puede desactivarse en cualquier momento</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="wActivo" checked/><span class="slider"></span></label>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-ghost" id="workerModalCancel">Cancelar</button>
+        <button class="btn-primary" id="workerStep1Next">Siguiente: crear PIN →</button>
+      </div>
+    </div>
+
+    <div id="workerStep2" style="display:none;">
+      <div style="text-align:center;padding:.5rem 0 1.2rem;">
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:.6rem;">PIN de acceso para <strong id="wNombrePreview">–</strong></div>
+        <div class="pin-dots" style="justify-content:center;" id="pinDots">
+          <div class="pin-dot"></div><div class="pin-dot"></div>
+          <div class="pin-dot"></div><div class="pin-dot"></div>
+        </div>
+        <div class="pin-pad" style="margin:0 auto;">
+          <button class="pin-key" data-n="1">1</button>
+          <button class="pin-key" data-n="2">2</button>
+          <button class="pin-key" data-n="3">3</button>
+          <button class="pin-key" data-n="4">4</button>
+          <button class="pin-key" data-n="5">5</button>
+          <button class="pin-key" data-n="6">6</button>
+          <button class="pin-key" data-n="7">7</button>
+          <button class="pin-key" data-n="8">8</button>
+          <button class="pin-key" data-n="9">9</button>
+          <button class="pin-key btn-gold-sm" id="pinAutoBtn" style="font-size:.72rem;padding:.5rem;">Auto</button>
+          <button class="pin-key" data-n="0">0</button>
+          <button class="pin-key danger" id="pinDelBtn">⌫</button>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:.8rem;">Introduce un PIN de 4 dígitos único para este trabajador</div>
+        <div class="error" id="workerPinError" style="margin-top:.5rem;text-align:left;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" id="workerStep2Back">← Atrás</button>
+        <button class="btn-primary" id="workerStep2Next" disabled>Siguiente →</button>
+      </div>
+    </div>
+
+    <div id="workerStep3" style="display:none;">
+      <div class="field"><label>Tipo de contrato</label>
+        <select id="wContrato">
+          <option value="">Sin especificar</option>
+          <option value="Indefinido">Indefinido</option>
+          <option value="Temporal">Temporal</option>
+          <option value="Prácticas">Prácticas</option>
+          <option value="Autónomo">Autónomo</option>
+        </select>
+      </div>
+      <div class="field"><label>Horas semanales</label>
+        <input type="number" id="wHoras" placeholder="Ej: 30" min="0" max="80"/>
+      </div>
+      <div class="field"><label>Salario</label>
+        <input type="text" id="wSalario" placeholder="Ej: 9,50 €/hora o 1.200 €/mes brutos"/>
+      </div>
+      <div class="field"><label>Notas del contrato</label>
+        <textarea id="wNotasLaborales" rows="3" placeholder="Condiciones, horario habitual, observaciones…" style="width:100%;border:1px solid var(--border);background:#fff;padding:.6rem .8rem;border-radius:4px;font-size:.85rem;font-family:'DM Sans',sans-serif;resize:vertical;"></textarea>
+      </div>
+      <div class="form-hint" style="margin-top:.3rem;">Esto lo verá <b>solo este trabajador</b> en su perfil (pestaña "Mi contrato"). Es opcional. Como el acceso es con un PIN de 4 cifras, evita poner aquí datos muy delicados (DNI, cuenta bancaria…).</div>
+      <div class="modal-footer">
+        <button class="btn-ghost" id="workerStep3Back">← Atrás</button>
+        <button class="btn-primary" id="workerModalSave">Crear trabajador →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+
+import { initPanel, db, baseUrl } from './js/panel-core.js';
+import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp }
+  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { usaBarra } from './js/common.js';
+import { escapeHtml } from './js/common.js';
+import { sincronizarAccesos } from './js/accesos.js';
+
+let uid = null;
+let allWorkers = [];
+let allNotas = [];
+let editingWorkerId = null;
+let selectedRol = null;
+let currentPin = '';
+let restoData = null;
+
+const ROL_META = {
+  cocina:    { icon:'🍳', label:'Cocina (antiguo)', color:'#c24a2b' },
+  camarero:  { icon:'🍽️', label:'Camarero',  color:'#2d5a3d' },
+  barra:     { icon:'🍺', label:'Barra',     color:'#c8963e' },
+  encargado: { icon:'👔', label:'Encargado', color:'#0f0e0b' },
+  limpieza:  { icon:'🧹', label:'Limpieza',  color:'#4a5ab0' },
+};
+
+function fmtNotaFecha(ts) {
+  if (!ts) return 'ahora';
+  return new Date(ts.seconds*1000).toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+
+function sync() {
+  sincronizarAccesos(uid, allWorkers).catch(e => {
+    console.warn('accesos:', e);
+    if (e.code === 'permission-denied') document.getElementById('rulesNotice').style.display = 'block';
+  });
+}
+
+function renderNotas() {
+  const el = document.getElementById('notasList');
+  if (!allNotas.length) {
+    el.innerHTML = '<div style="font-size:.8rem;color:var(--muted);padding:.4rem 0;">Sin notas publicadas todavía.</div>';
+    return;
+  }
+  el.innerHTML = allNotas.map(n => `
+    <div style="display:flex;align-items:flex-start;gap:.7rem;padding:.6rem 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;">
+        <div style="font-size:.85rem;">${escapeHtml(n.texto)}</div>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:.15rem;">${fmtNotaFecha(n.timestamp)}</div>
+      </div>
+      <button data-delnota="${escapeHtml(n.id)}" title="Eliminar" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;">🗑</button>
+    </div>`).join('');
+}
+
+function renderEquipo() {
+  const act = allWorkers.filter(w=>w.activo);
+  document.getElementById('eq-total').textContent    = act.length;
+  document.getElementById('eq-camarero').textContent = act.filter(w=>w.rol==='camarero').length;
+  document.getElementById('eq-barra').textContent    = act.filter(w=>w.rol==='barra').length;
+  document.getElementById('eq-encargado').textContent= act.filter(w=>w.rol==='encargado').length;
+
+  const search  = (document.getElementById('workerSearch').value||'').toLowerCase();
+  const rolFilt = document.getElementById('workerRolFilter').value;
+  const items = allWorkers.filter(w => {
+    const name = ((w.nombre||'')+' '+(w.apellidos||'')).toLowerCase();
+    return (!search || name.includes(search)) && (!rolFilt || w.rol===rolFilt);
+  });
+
+  const tbody = document.getElementById('workerTbody');
+  if (!items.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty" style="padding:2rem"><div class="empty-icon">👥</div><strong>Sin trabajadores${rolFilt||search?' que coincidan':''}</strong><span>Añade el primero con el botón de arriba</span></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = items.map(w => {
+    const meta = ROL_META[w.rol] || {icon:'👤',label:w.rol,color:'#888'};
+    const initials = ((w.nombre||'?')[0]+(w.apellidos?w.apellidos[0]:'')).toUpperCase();
+    return `<tr>
+      <td><div class="worker-avatar" style="background:${meta.color}">${escapeHtml(initials)}</div></td>
+      <td>
+        <div style="font-weight:600;">${escapeHtml(w.nombre)} ${escapeHtml(w.apellidos||'')}</div>
+        <div style="font-size:.72rem;color:var(--muted);">${w.ultimoAcceso ? 'Último acceso ' + new Date(w.ultimoAcceso).toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Aún no ha entrado'}</div>
+        ${w.rol==='cocina' ? '<div style="font-size:.7rem;color:var(--rust);font-weight:600;">Cambia su rol: cocina ya no entra por móvil</div>' : ''}
+      </td>
+      <td><span class="rol-badge ${escapeHtml(w.rol)}">${meta.icon} ${escapeHtml(meta.label)}</span></td>
+      <td><span class="pin-display">${escapeHtml(w.pin||'––––')}</span></td>
+      <td style="text-align:center;">
+        <label class="toggle"><input type="checkbox" ${w.activo?'checked':''} data-toggle="${escapeHtml(w.id)}"/><span class="slider"></span></label>
+      </td>
+      <td>
+        <div style="display:flex;gap:.35rem;">
+          <button class="btn-sm btn-gold-sm" data-edit="${escapeHtml(w.id)}" title="Editar">✏️</button>
+          <button class="btn-sm btn-danger-sm" data-del="${escapeHtml(w.id)}" title="Eliminar">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function showWorkerStep(step) {
+  document.getElementById('workerStep1').style.display = step===1?'block':'none';
+  document.getElementById('workerStep2').style.display = step===2?'block':'none';
+  document.getElementById('workerStep3').style.display = step===3?'block':'none';
+  if (step===2) renderPinState();
+}
+
+function renderPinState() {
+  document.querySelectorAll('#pinDots .pin-dot').forEach((d,i) => d.classList.toggle('filled', i < currentPin.length));
+  document.getElementById('workerStep2Next').disabled = currentPin.length < 4;
+  document.getElementById('workerPinError').classList.remove('show');
+}
+
+function openWorkerModal(worker) {
+  currentPin = worker?.pin || '';
+  selectedRol = worker && worker.rol !== 'cocina' ? worker.rol : null;
+  document.getElementById('workerModalTitle').textContent = worker ? 'Editar trabajador' : 'Nuevo trabajador';
+  document.getElementById('wNombre').value    = worker?.nombre    || '';
+  document.getElementById('wApellidos').value = worker?.apellidos || '';
+  document.getElementById('wActivo').checked  = worker ? !!worker.activo : true;
+  document.getElementById('wContrato').value       = worker?.contrato       || '';
+  document.getElementById('wHoras').value          = worker?.horasSemanales || '';
+  document.getElementById('wSalario').value        = worker?.salario        || '';
+  document.getElementById('wNotasLaborales').value = worker?.notasLaborales || '';
+  document.getElementById('workerModalSave').textContent = worker ? 'Guardar cambios →' : 'Crear trabajador →';
+  document.querySelectorAll('.rol-card').forEach(c => c.classList.toggle('selected', c.getAttribute('data-rol') === selectedRol));
+  showWorkerStep(1);
+  document.getElementById('workerModal').classList.add('open');
+}
+function closeWorkerModal() {
+  document.getElementById('workerModal').classList.remove('open');
+  editingWorkerId = null;
+  selectedRol = null;
+  currentPin = '';
+}
+
+function pinRepetido() {
+  return allWorkers.find(w => w.pin===currentPin && w.id!==editingWorkerId);
+}
+
+initPanel().then(({ uid: u, restoData: rd }) => {
+  uid = u; restoData = rd;
+
+  const workerUrl = baseUrl + 'trabajador.html?uid=' + encodeURIComponent(uid);
+  new QRCode(document.getElementById('workerQr'), { text: workerUrl, width: 110, height: 110, colorDark:'#0f0e0b', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  document.getElementById('openWorkerUrlBtn').addEventListener('click', () => window.open(workerUrl, '_blank'));
+  document.getElementById('copyWorkerUrlBtn').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(workerUrl); showToast('Enlace copiado ✓', 'success'); }
+    catch (e) { prompt('Copia este enlace:', workerUrl); }
+  });
+
+  onSnapshot(collection(db,'restaurantes',uid,'trabajadores'), snap => {
+    allWorkers = snap.docs.map(d => ({id:d.id,...d.data()}))
+      .sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre),'es'));
+    document.getElementById('rulesNotice').style.display = 'none';
+    renderEquipo();
+    // Cada vez que cambia el equipo, se ponen al día las huellas de PIN...
+    sync();
+    // ...y se apunta si hay alguien en barra (entonces las bebidas van a la barra, no a cocina).
+    const hay = allWorkers.some(w => w.activo && w.rol === 'barra');
+    if (usaBarra(restoData) !== hay) {
+      restoData.hayBarra = hay;
+      updateDoc(doc(db,'restaurantes',uid), { hayBarra: hay }).catch(()=>{});
+    }
+  }, err => {
+    console.error('Trabajadores:', err);
+    if (err.code === 'permission-denied') document.getElementById('rulesNotice').style.display = 'block';
+  });
+
+  onSnapshot(collection(db,'restaurantes',uid,'notas'), snap => {
+    allNotas = snap.docs.map(d => ({id:d.id,...d.data()}))
+      .sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0));
+    renderNotas();
+  });
+
+  const publicar = async () => {
+    const input = document.getElementById('notaInput');
+    const texto = input.value.trim().slice(0, 300);
+    if (!texto) return;
+    try {
+      await addDoc(collection(db,'restaurantes',uid,'notas'), { texto, timestamp: serverTimestamp() });
+      input.value = '';
+      showToast('📌 Nota publicada', 'success');
+    } catch(e) { showToast('❌ Error al publicar', 'error'); }
+  };
+  document.getElementById('notaPublicarBtn').addEventListener('click', publicar);
+  document.getElementById('notaInput').addEventListener('keydown', e => { if (e.key === 'Enter') publicar(); });
+
+  // Botones de la tabla y de las notas (un solo escuchador)
+  document.querySelector('.main').addEventListener('click', async e => {
+    const dn = e.target.closest('[data-delnota]');
+    if (dn) {
+      try { await deleteDoc(doc(db,'restaurantes',uid,'notas',dn.dataset.delnota)); }
+      catch(err) { showToast('❌ Error al eliminar', 'error'); }
+      return;
+    }
+    const ed = e.target.closest('[data-edit]');
+    if (ed) { const w = allWorkers.find(x=>x.id===ed.dataset.edit); if (w) { editingWorkerId = w.id; openWorkerModal(w); } return; }
+    const del = e.target.closest('[data-del]');
+    if (del) {
+      if (!confirm('¿Eliminar este trabajador? Dejará de poder entrar.')) return;
+      try { await deleteDoc(doc(db,'restaurantes',uid,'trabajadores',del.dataset.del)); showToast('Trabajador eliminado', 'success'); }
+      catch(err) { showToast('No se pudo eliminar', 'error'); }
+    }
+  });
+  document.querySelector('.main').addEventListener('change', e => {
+    const t = e.target.closest('[data-toggle]');
+    if (t) updateDoc(doc(db,'restaurantes',uid,'trabajadores',t.dataset.toggle), { activo: t.checked })
+      .catch(() => { showToast('No se pudo actualizar', 'error'); t.checked = !t.checked; });
+  });
+
+  document.getElementById('rolesGrid').addEventListener('click', function(e) {
+    const card = e.target.closest('.rol-card');
+    if (!card) return;
+    selectedRol = card.getAttribute('data-rol');
+    document.querySelectorAll('.rol-card').forEach(c=>c.classList.remove('selected'));
+    card.classList.add('selected');
+  });
+
+  document.getElementById('workerStep1Next').addEventListener('click', () => {
+    const nombre = document.getElementById('wNombre').value.trim();
+    if (!nombre) { showToast('Introduce el nombre del trabajador', 'error'); return; }
+    if (!selectedRol) { showToast('Selecciona un rol', 'error'); return; }
+    document.getElementById('wNombrePreview').textContent = nombre;
+    showWorkerStep(2);
+  });
+  document.getElementById('workerStep2Back').addEventListener('click', () => showWorkerStep(1));
+  document.getElementById('workerStep2Next').addEventListener('click', () => {
+    if (currentPin.length < 4) return;
+    const rep = pinRepetido();
+    if (rep) {
+      const err = document.getElementById('workerPinError');
+      err.textContent = `Este PIN ya lo usa ${rep.nombre}. Elige otro.`;
+      err.classList.add('show'); return;
+    }
+    showWorkerStep(3);
+  });
+  document.getElementById('workerStep3Back').addEventListener('click', () => showWorkerStep(2));
+
+  document.querySelectorAll('#workerStep2 .pin-key[data-n]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (currentPin.length >= 4) return;
+      currentPin += btn.getAttribute('data-n');
+      renderPinState();
+    });
+  });
+  document.getElementById('pinDelBtn').addEventListener('click', () => { currentPin = currentPin.slice(0,-1); renderPinState(); });
+  document.getElementById('pinAutoBtn').addEventListener('click', () => {
+    // PIN aleatorio que no use nadie más
+    for (let k = 0; k < 50; k++) {
+      currentPin = String(Math.floor(1000 + Math.random()*9000));
+      if (!pinRepetido()) break;
+    }
+    renderPinState();
+  });
+
+  document.getElementById('workerModalSave').addEventListener('click', async () => {
+    const nombre    = document.getElementById('wNombre').value.trim();
+    const apellidos = document.getElementById('wApellidos').value.trim();
+    const activo    = document.getElementById('wActivo').checked;
+
+    if (currentPin.length < 4) { showToast('PIN incompleto', 'error'); return; }
+    const rep = pinRepetido();
+    if (rep) {
+      showWorkerStep(2);
+      const err = document.getElementById('workerPinError');
+      err.textContent = `Este PIN ya lo usa ${rep.nombre}. Elige otro.`;
+      err.classList.add('show'); return;
+    }
+
+    const horas = document.getElementById('wHoras').value;
+    const data = {
+      nombre, apellidos, rol: selectedRol, pin: currentPin, activo,
+      contrato: document.getElementById('wContrato').value,
+      horasSemanales: horas ? Number(horas) : null,
+      salario: document.getElementById('wSalario').value.trim(),
+      notasLaborales: document.getElementById('wNotasLaborales').value.trim()
+    };
+
+    const btn = document.getElementById('workerModalSave');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      if (editingWorkerId) {
+        await updateDoc(doc(db,'restaurantes',uid,'trabajadores',editingWorkerId), data);
+        showToast('Trabajador actualizado ✓', 'success');
+      } else {
+        data.creadoEn = new Date().toISOString();
+        await addDoc(collection(db,'restaurantes',uid,'trabajadores'), data);
+        showToast('Trabajador creado ✓ — ya puede entrar con su PIN', 'success');
+      }
+      closeWorkerModal();
+    } catch(e) {
+      console.error('Worker save error:', e);
+      if (e.code === 'permission-denied') {
+        document.getElementById('rulesNotice').style.display = 'block';
+        showToast('Sin permisos: publica las reglas nuevas de Firestore', 'error');
+      } else {
+        showToast('Error al guardar: ' + (e.message||e.code), 'error');
+      }
+    }
+    btn.disabled = false; btn.textContent = editingWorkerId ? 'Guardar cambios →' : 'Crear trabajador →';
+  });
+
+  document.getElementById('addWorkerBtn').addEventListener('click', () => { editingWorkerId = null; openWorkerModal(null); });
+  document.getElementById('workerModalClose').addEventListener('click', closeWorkerModal);
+  document.getElementById('workerModalCancel').addEventListener('click', closeWorkerModal);
+  document.getElementById('workerModal').addEventListener('click', function(e){ if(e.target===this) closeWorkerModal(); });
+
+  document.getElementById('workerSearch').addEventListener('input', renderEquipo);
+  document.getElementById('workerRolFilter').addEventListener('change', renderEquipo);
+});
+
+</script>
+</body>
+</html>

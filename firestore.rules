@@ -1,0 +1,136 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════
+//  REGLAS DE SEGURIDAD DE CARTÉA
+//  Dónde pegarlas: Firebase Console → Firestore Database → Reglas → Publicar
+//
+//  Idea general:
+//  - El DUEÑO entra con email y su uid es el id de su restaurante.
+//  - CLIENTES, COCINA y EQUIPO entran como "anónimos" (sin cuenta).
+//  - Los anónimos pueden leer la carta y crear pedidos/avisos, pero
+//    no pueden cambiar la carta, ni ver la lista del equipo (PINs,
+//    sueldos), ni la lista de restaurantes, ni cambiarse el plan.
+//  - Si una cuenta está desactivada (activo = false) no entran pedidos.
+// ═══════════════════════════════════════════════════════════════
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(restId) { return signedIn() && request.auth.uid == restId; }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function conEmail() { return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
+    function restoActivo(restId) {
+      return get(/databases/$(database)/documents/restaurantes/$(restId)).data.get('activo', true) != false;
+    }
+    function mesaValida(m) { return m is string && m.matches('^[0-9]{1,4}$'); }
+
+    match /restaurantes/{restId} {
+      // Básico: hasta 5 mesas. Pro: hasta 200.
+      function validMesas(antes) {
+        let m = request.resource.data.get('mesas', 5);
+        let pro = antes != null && antes.get('plan', 'basico') == 'pro';
+        return m is int && m >= 1 && (m <= 5 || (pro && m <= 200));
+      }
+
+      // Se puede abrir UN restaurante si se conoce su id (viene en el QR),
+      // pero nadie puede sacar la LISTA de todos los restaurantes.
+      allow get: if signedIn();
+      allow list: if false;
+
+      // Al registrarse (con email, no anónimo): siempre empieza en plan Básico y activo.
+      allow create: if isOwner(restId) && conEmail()
+        && request.resource.data.get('plan', 'basico') == 'basico'
+        && request.resource.data.get('activo', true) == true
+        && validMesas(null);
+
+      // El dueño edita sus datos, pero NO puede tocarse el plan ni el
+      // estado de la cuenta (eso lo cambias tú a mano en la consola).
+      allow update: if isOwner(restId)
+        && !changed().hasAny(['plan', 'activo', 'uid', 'creadoEn'])
+        && (!changed().hasAny(['mesas']) || validMesas(resource.data));
+
+      allow delete: if false;
+
+      // ── Carta ──
+      match /menu/{itemId} {
+        allow read: if signedIn();
+        allow write: if isOwner(restId);
+      }
+
+      // ── Pedidos ──
+      match /pedidos/{pedidoId} {
+        allow read: if signedIn();
+
+        // El cliente crea el pedido con una forma concreta y siempre "nuevo".
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['mesa','items','total','nota','estado','timestamp','cliente','idioma'])
+          && request.resource.data.estado == 'nuevo'
+          && request.resource.data.cliente == request.auth.uid
+          && mesaValida(request.resource.data.mesa)
+          && request.resource.data.items is list
+          && request.resource.data.items.size() > 0 && request.resource.data.items.size() <= 60
+          && request.resource.data.total is number && request.resource.data.total >= 0
+          && request.resource.data.nota is string && request.resource.data.nota.size() <= 300
+          && request.resource.data.get('idioma', 'es') in ['es', 'en']
+          && request.resource.data.timestamp == request.time
+          && restoActivo(restId);
+
+        // Cocina / barra / equipo / dueño solo pueden cambiar el estado.
+        allow update: if signedIn()
+          && changed().hasOnly(['estado', 'listoEn', 'retiradoCocina', 'barraLista', 'bebidasServidas', 'platosServidos'])
+          && request.resource.data.estado in ['nuevo','preparando','listo','completado','cancelado'];
+
+        // Borrar pedidos (historial) solo el dueño.
+        allow delete: if isOwner(restId);
+      }
+
+      // ── Avisos (llamar camarero / pedir cuenta) ──
+      match /avisos/{avisoId} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['mesa','tipo','timestamp','cliente'])
+          && request.resource.data.tipo in ['camarero', 'cuenta']
+          && mesaValida(request.resource.data.mesa)
+          && request.resource.data.cliente == request.auth.uid
+          && request.resource.data.timestamp == request.time
+          && restoActivo(restId);
+        allow update: if false;
+        allow delete: if signedIn();   // el equipo los marca como atendidos
+      }
+
+      // ── Equipo ──
+      // Se puede abrir UNA ficha si se conoce su id (que solo se obtiene
+      // con el PIN correcto), pero solo el dueño puede ver la LISTA.
+      match /trabajadores/{workerId} {
+        allow get: if signedIn();
+        allow list: if isOwner(restId);
+        allow create, delete: if isOwner(restId);
+        allow update: if isOwner(restId)
+          || (signedIn() && changed().hasOnly(['ultimoAcceso']));
+      }
+
+      // Huella del PIN → id del trabajador. Mismo principio.
+      match /accesos/{hash} {
+        allow get: if signedIn();
+        allow list, write: if isOwner(restId);
+      }
+
+      // ── Notas del dueño para el equipo ──
+      match /notas/{notaId} {
+        allow read: if signedIn();
+        allow write: if isOwner(restId);
+      }
+
+      // ── Limpieza de mesas (lo marca el equipo de limpieza) ──
+      match /mesasEstado/{mesaId} {
+        allow read: if signedIn();
+        allow create, update: if signedIn()
+          && mesaId.matches('^[0-9]{1,4}$')
+          && request.resource.data.keys().hasOnly(['limpia', 'actualizado'])
+          && request.resource.data.limpia is bool
+          && request.resource.data.actualizado == request.time;
+        allow delete: if isOwner(restId);
+      }
+    }
+  }
+}

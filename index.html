@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" href="./img/carteafondo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cartéa – La carta digital para tu restaurante</title>
+  <meta name="description" content="Carta digital con QR para restaurantes: los clientes ven la carta, piden y llaman al camarero desde el móvil. Pedidos a cocina en tiempo real, equipo conectado y ventas. Empieza gratis.">
+  <meta property="og:title" content="Cartéa – La carta digital para tu restaurante">
+  <meta property="og:description" content="Carta con QR, pedidos a cocina en tiempo real y tu equipo conectado. Sin apps. Empieza gratis.">
+  <meta property="og:image" content="img/carteafondo.png">
+  <meta name="theme-color" content="#2d5a3d">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --ink:#0f0e0b; --cream:#faf7f2; --warm:#f2ebe0;
+      --gold:#c8963e; --gold-l:#e8b96a; --gold-bg:rgba(200,150,62,.09);
+      --rust:#c24a2b; --rust-bg:rgba(194,74,43,.09);
+      --green:#2d5a3d; --green-l:#4a8c63; --green-bg:rgba(45,90,61,.09);
+      --muted:#7a746c; --border:rgba(15,14,11,.1); --red:#b03020;
+      --section-gap:7rem;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html{scroll-behavior:smooth;}
+    body{background:var(--cream);color:var(--ink);font-family:'DM Sans',sans-serif;overflow-x:hidden;}
+
+    /* ─── NAV ─── */
+    nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:1.2rem 5%;background:rgba(250,247,242,0.88);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s,box-shadow .3s;}
+    nav.scrolled{border-color:var(--border);box-shadow:0 2px 20px rgba(15,14,11,.06);}
+    .nav-logo{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--green);letter-spacing:-.03em;text-decoration:none;}
+    .nav-logo em{color:var(--gold);font-style:normal;}
+    .nav-links{display:flex;align-items:center;gap:2rem;}
+    .nav-links a{color:var(--muted);font-size:.875rem;font-weight:500;text-decoration:none;transition:color .2s;}
+    .nav-links a:hover{color:var(--ink);}
+    .nav-cta{background:var(--green);color:#fff !important;padding:.6rem 1.4rem;border-radius:3px;font-size:.875rem;font-weight:600;text-decoration:none;transition:background .2s;}
+    .nav-cta:hover{background:var(--green-l) !important;}
+    .nav-mobile-btn{display:none;background:none;border:none;cursor:pointer;padding:.3rem;}
+    .nav-mobile-btn span{display:block;width:22px;height:2px;background:var(--ink);margin:4px 0;}
+
+    /* ─── HERO ─── */
+    .hero{min-height:100vh;display:flex;align-items:center;padding:8rem 5% 5rem;position:relative;overflow:hidden;}
+    .hero-blob1{position:absolute;top:-10%;right:-5%;width:55%;padding-top:55%;background:radial-gradient(circle,rgba(200,150,62,.13) 0%,transparent 70%);border-radius:50%;}
+    .hero-blob2{position:absolute;bottom:-15%;left:-8%;width:45%;padding-top:45%;background:radial-gradient(circle,rgba(45,90,61,.1) 0%,transparent 70%);border-radius:50%;}
+    .hero-texture{position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='30' cy='30' r='1' fill='%230f0e0b' fill-opacity='.035'/%3E%3C/svg%3E");background-size:60px 60px;}
+    .hero-inner{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;max-width:1200px;margin:0 auto;width:100%;}
+    .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.7rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:1.5rem;}
+    .hero-eyebrow::before{content:'';width:1.4rem;height:1px;background:var(--gold);}
+    .hero-title{font-family:'Playfair Display',serif;font-size:clamp(2.6rem,5vw,4rem);font-weight:900;line-height:1.05;margin-bottom:1.4rem;letter-spacing:-.02em;}
+    .hero-title em{color:var(--green);font-style:normal;}
+    .hero-desc{color:var(--muted);font-size:1.05rem;line-height:1.7;margin-bottom:2.2rem;max-width:480px;font-weight:300;}
+    .hero-actions{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+    .btn-primary{background:var(--green);color:#fff;padding:.9rem 2rem;border-radius:3px;font-size:.9rem;font-weight:600;text-decoration:none;transition:all .25s;display:inline-block;}
+    .btn-primary:hover{background:var(--green-l);transform:translateY(-1px);box-shadow:0 8px 24px rgba(45,90,61,.25);}
+    .btn-ghost{color:var(--green);font-size:.9rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;transition:gap .2s;}
+    .btn-ghost:hover{gap:.8rem;}
+    .hero-visual{position:relative;}
+    .hero-card-wrap{position:relative;transform:perspective(900px) rotateY(-8deg) rotateX(3deg);transition:transform .4s ease;}
+    .hero-card-wrap:hover{transform:perspective(900px) rotateY(-2deg) rotateX(1deg);}
+    .mock-card{background:#fff;border-radius:12px;box-shadow:0 30px 80px rgba(15,14,11,.18),0 8px 20px rgba(15,14,11,.08);overflow:hidden;}
+    .mock-header{background:var(--green);padding:1.4rem 1.6rem;display:flex;align-items:center;justify-content:space-between;}
+    .mock-resto-name{font-family:'Playfair Display',serif;color:#fff;font-size:1.2rem;font-weight:700;}
+    .mock-table-badge{background:rgba(255,255,255,.2);color:#fff;padding:.25rem .7rem;border-radius:20px;font-size:.72rem;font-weight:600;}
+    .mock-body{padding:1.4rem 1.6rem;}
+    .mock-cat{font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:.8rem;}
+    .mock-item{display:flex;align-items:center;gap:.9rem;padding:.7rem 0;border-bottom:1px solid var(--border);}
+    .mock-item:last-child{border-bottom:none;}
+    .mock-emoji{font-size:1.4rem;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--warm);border-radius:8px;flex-shrink:0;}
+    .mock-item-info{flex:1;}
+    .mock-item-name{font-size:.85rem;font-weight:600;margin-bottom:.15rem;}
+    .mock-item-desc{font-size:.72rem;color:var(--muted);font-weight:300;}
+    .mock-item-price{font-size:.9rem;font-weight:700;color:var(--green);}
+    .mock-add-btn{width:26px;height:26px;background:var(--green);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+    .mock-footer{background:var(--green);color:#fff;padding:1rem 1.6rem;display:flex;align-items:center;justify-content:space-between;}
+    .mock-footer-label{font-size:.75rem;opacity:.7;}
+    .mock-footer-total{font-size:1rem;font-weight:700;}
+    .mock-footer-btn{background:var(--gold);color:#fff;padding:.5rem 1.2rem;border-radius:3px;font-size:.78rem;font-weight:700;}
+    .hero-float-badge{position:absolute;bottom:-16px;right:-16px;background:#fff;border-radius:10px;padding:.8rem 1.1rem;box-shadow:0 12px 40px rgba(15,14,11,.15);display:flex;align-items:center;gap:.7rem;font-size:.78rem;font-weight:600;}
+    .hero-float-dot{width:8px;height:8px;background:#27ae60;border-radius:50%;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(39,174,96,.4);}50%{box-shadow:0 0 0 6px rgba(39,174,96,0);}}
+    .hero-stats{position:absolute;top:-12px;left:-16px;background:var(--green);border-radius:10px;padding:.7rem 1rem;color:#fff;box-shadow:0 12px 30px rgba(45,90,61,.3);}
+    .hero-stats-num{font-size:1.3rem;font-weight:900;font-family:'Playfair Display',serif;}
+    .hero-stats-label{font-size:.65rem;opacity:.7;margin-top:.1rem;}
+
+    /* ─── STRIP ─── */
+    .strip{background:var(--green);padding:1.4rem 5%;display:flex;align-items:center;justify-content:center;gap:3rem;flex-wrap:wrap;}
+    .strip-item{display:flex;align-items:center;gap:.7rem;color:rgba(255,255,255,.75);font-size:.82rem;}
+    .strip-icon{font-size:1.1rem;}
+    .strip-item strong{color:#fff;}
+
+    /* ─── SECTIONS ─── */
+    section{padding:var(--section-gap) 5%;}
+    .section-inner{max-width:1200px;margin:0 auto;}
+    .section-eyebrow{font-size:.68rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:.5rem;margin-bottom:1.2rem;}
+    .section-eyebrow::before{content:'';width:1.4rem;height:1px;background:var(--gold);}
+    .section-title{font-family:'Playfair Display',serif;font-size:clamp(2rem,3.5vw,2.8rem);font-weight:900;line-height:1.1;letter-spacing:-.02em;margin-bottom:1rem;}
+    .section-sub{color:var(--muted);font-size:1rem;line-height:1.7;max-width:520px;font-weight:300;}
+
+    /* ─── HOW ─── */
+    .how{background:var(--warm);}
+    .how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;margin-top:3.5rem;}
+    .how-step{position:relative;padding:2rem 1.8rem;background:#fff;border-radius:8px;border:1px solid var(--border);transition:transform .3s,box-shadow .3s;}
+    .how-step:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(15,14,11,.1);}
+    .step-num{font-family:'Playfair Display',serif;font-size:4rem;font-weight:900;color:var(--gold);opacity:.2;position:absolute;top:.8rem;right:1.2rem;line-height:1;}
+    .step-icon{font-size:1.8rem;margin-bottom:1rem;}
+    .step-title{font-size:1rem;font-weight:700;margin-bottom:.5rem;}
+    .step-desc{font-size:.875rem;color:var(--muted);line-height:1.65;font-weight:300;}
+
+    /* ─── FEATURES ─── */
+    .features-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-top:3.5rem;}
+    .feat-card{padding:2rem;border:1px solid var(--border);border-radius:8px;transition:all .3s;background:#fff;}
+    .feat-card:hover{border-color:var(--gold);box-shadow:0 12px 40px rgba(200,150,62,.1);}
+    .feat-card.featured{background:var(--green);border-color:var(--green);grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:center;}
+    .feat-card-icon{width:44px;height:44px;border-radius:8px;background:var(--gold-bg);display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:1.2rem;}
+    .feat-card.featured .feat-card-icon{background:rgba(255,255,255,.15);}
+    .feat-card-title{font-size:.95rem;font-weight:700;margin-bottom:.5rem;}
+    .feat-card.featured .feat-card-title{color:#fff;font-size:1.3rem;font-family:'Playfair Display',serif;}
+    .feat-card-desc{font-size:.85rem;color:var(--muted);line-height:1.65;font-weight:300;}
+    .feat-card.featured .feat-card-desc{color:rgba(255,255,255,.7);font-size:.95rem;}
+    .feat-card.featured .feat-card-visual{display:flex;flex-direction:column;gap:.6rem;}
+    .feat-stat{background:rgba(255,255,255,.1);border-radius:6px;padding:.8rem 1rem;display:flex;align-items:center;gap:.8rem;}
+    .feat-stat-num{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:#fff;}
+    .feat-stat-label{font-size:.75rem;color:rgba(255,255,255,.6);font-weight:300;}
+
+    /* ─── TESTIMONIALS ─── */
+    .faq-list{margin-top:2.5rem;max-width:760px;}
+    .faq{background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:.7rem;padding:0 1.3rem;}
+    .faq summary{cursor:pointer;padding:1.1rem 0;font-weight:600;font-size:.95rem;list-style:none;display:flex;justify-content:space-between;gap:1rem;}
+    .faq summary::-webkit-details-marker{display:none;}
+    .faq summary::after{content:'+';color:var(--gold);font-weight:700;font-size:1.2rem;line-height:1;}
+    .faq[open] summary::after{content:'−';}
+    .faq p{padding:0 0 1.1rem;color:var(--muted);font-size:.88rem;line-height:1.7;font-weight:300;}
+    .link-btn{background:none;border:none;color:var(--green);font-size:.78rem;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;text-decoration:underline;}
+    .check-row{display:flex;gap:.55rem;align-items:flex-start;font-size:.78rem;color:var(--muted);line-height:1.5;margin:.3rem 0 .9rem;}
+    .check-row input{margin-top:.2rem;accent-color:var(--green);width:auto;}
+    .check-row a{color:var(--green);}
+    .ok-msg{display:none;background:var(--green-bg,rgba(45,90,61,.09));color:var(--green);font-size:.8rem;padding:.6rem .8rem;border-radius:3px;margin-bottom:.8rem;line-height:1.5;}
+    .ok-msg.show{display:block;}
+    .testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3.5rem;}
+    .testi-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1.8rem;}
+    .testi-stars{color:var(--gold);font-size:1rem;margin-bottom:1rem;}
+    .testi-text{font-size:.9rem;line-height:1.7;color:var(--muted);font-weight:300;margin-bottom:1.4rem;font-style:italic;}
+    .testi-author{display:flex;align-items:center;gap:.8rem;}
+    .testi-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;color:#fff;flex-shrink:0;}
+    .testi-name{font-size:.85rem;font-weight:600;}
+    .testi-role{font-size:.75rem;color:var(--muted);}
+
+    /* ─── PRICING ─── */
+    .pricing{background:var(--warm);}
+    .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3.5rem;}
+    .price-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:2.2rem 1.8rem;transition:all .3s;}
+    .price-card:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(15,14,11,.1);}
+    .price-card.highlight{background:var(--green);border-color:var(--green);transform:translateY(-8px);box-shadow:0 24px 60px rgba(45,90,61,.3);}
+    .price-card.highlight:hover{transform:translateY(-12px);}
+    .price-badge{display:inline-block;background:var(--gold-bg);color:var(--gold);font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.3rem .7rem;border-radius:20px;margin-bottom:1rem;}
+    .price-card.highlight .price-badge{background:rgba(200,150,62,.25);color:var(--gold-l);}
+    .price-name{font-size:1rem;font-weight:700;margin-bottom:.4rem;}
+    .price-card.highlight .price-name{color:#fff;}
+    .price-amount{font-family:'Playfair Display',serif;font-size:2.8rem;font-weight:900;margin-bottom:.2rem;line-height:1;}
+    .price-card.highlight .price-amount{color:#fff;}
+    .price-period{font-size:.78rem;color:var(--muted);margin-bottom:1.8rem;}
+    .price-card.highlight .price-period{color:rgba(255,255,255,.6);}
+    .price-features{list-style:none;margin-bottom:2rem;}
+    .price-features li{display:flex;align-items:center;gap:.7rem;font-size:.85rem;padding:.5rem 0;border-bottom:1px solid var(--border);color:var(--muted);}
+    .price-card.highlight .price-features li{border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.75);}
+    .price-features li:last-child{border-bottom:none;}
+    .price-check{color:var(--green-l);}
+    .price-card.highlight .price-check{color:var(--gold-l);}
+    .price-btn{display:block;text-align:center;padding:.85rem;border-radius:3px;font-size:.875rem;font-weight:600;text-decoration:none;transition:all .2s;background:var(--green-bg);color:var(--green);}
+    .price-btn:hover{background:var(--green);color:#fff;}
+    .price-card.highlight .price-btn{background:var(--gold);color:#fff;}
+    .price-card.highlight .price-btn:hover{background:var(--gold-l);}
+
+    /* ─── CTA BANNER ─── */
+    .cta-banner{background:var(--green);padding:5rem 5%;text-align:center;}
+    .cta-banner .section-eyebrow{justify-content:center;color:var(--gold-l);}
+    .cta-banner .section-eyebrow::before{background:var(--gold-l);}
+    .cta-title{font-family:'Playfair Display',serif;font-size:clamp(2rem,4vw,3rem);color:#fff;font-weight:900;letter-spacing:-.02em;margin-bottom:1rem;max-width:600px;margin-left:auto;margin-right:auto;}
+    .cta-sub{color:rgba(255,255,255,.65);font-size:1rem;margin-bottom:2.5rem;font-weight:300;}
+    .cta-actions{display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;}
+    .btn-white{background:#fff;color:var(--green);padding:.9rem 2rem;border-radius:3px;font-size:.9rem;font-weight:700;text-decoration:none;transition:all .25s;}
+    .btn-white:hover{background:var(--cream);transform:translateY(-1px);}
+    .btn-outline-white{border:2px solid rgba(255,255,255,.4);color:#fff;padding:.85rem 2rem;border-radius:3px;font-size:.9rem;font-weight:600;text-decoration:none;transition:all .25s;}
+    .btn-outline-white:hover{border-color:#fff;background:rgba(255,255,255,.08);}
+
+    /* ─── MODAL ─── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(15,14,11,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:1.5rem;opacity:0;pointer-events:none;transition:opacity .3s ease;backdrop-filter:blur(4px);}
+    .modal-overlay.open{opacity:1;pointer-events:all;}
+    .modal{background:var(--cream);border-radius:10px;width:100%;max-width:430px;padding:2.5rem;transform:translateY(20px);transition:transform .3s ease;position:relative;max-height:90vh;overflow-y:auto;}
+    .modal-overlay.open .modal{transform:translateY(0);}
+    .modal-close{position:absolute;top:1.2rem;right:1.2rem;background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.5rem;line-height:1;padding:.1rem .5rem;border-radius:3px;}
+    .modal-close:hover{color:var(--ink);background:var(--border);}
+    .modal-logo{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--green);margin-bottom:.25rem;}
+    .modal-logo em{color:var(--gold);font-style:normal;}
+    .modal-eyebrow{font-size:.68rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:1.5rem;}
+    .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.5rem;}
+    .tab{padding:.65rem 1rem;font-size:.875rem;font-weight:500;cursor:pointer;color:var(--muted);border:none;background:none;border-bottom:2px solid transparent;transition:.2s;font-family:'DM Sans',sans-serif;margin-bottom:-1px;}
+    .tab.active{color:var(--green);border-bottom-color:var(--green);font-weight:600;}
+    .tab:hover:not(.active){color:var(--ink);}
+    .field{margin-bottom:.85rem;}
+    .field label{display:block;font-size:.7rem;font-weight:600;color:var(--muted);margin-bottom:.4rem;letter-spacing:.06em;text-transform:uppercase;}
+    .field input{width:100%;background:#fff;border:1px solid var(--border);color:var(--ink);padding:.82rem 1rem;border-radius:3px;font-family:'DM Sans',sans-serif;font-size:.9rem;transition:.2s;-webkit-appearance:none;appearance:none;}
+    .field input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(200,150,62,.1);}
+    .pass-wrap{position:relative;}
+    .pass-wrap input{padding-right:2.8rem;}
+    .eye-btn{position:absolute;right:.7rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:.3rem;display:flex;align-items:center;justify-content:center;transition:color .2s;}
+    .eye-btn:hover{color:var(--ink);}
+    .eye-icon,.eye-off-icon{width:18px;height:18px;display:block;pointer-events:none;}
+    .btn-form{width:100%;background:var(--green);color:#fff;border:none;padding:.9rem 1.5rem;border-radius:3px;font-size:.9rem;font-weight:600;cursor:pointer;margin-top:1rem;transition:all .25s;font-family:'DM Sans',sans-serif;}
+    .btn-form:hover{background:var(--green-l);}
+    .btn-form:active{transform:scale(.98);}
+    .btn-form:disabled{background:#c0b8b0;cursor:not-allowed;transform:none;}
+    .error{display:none;margin-top:.7rem;background:var(--rust-bg);border-left:3px solid var(--rust);color:var(--red);padding:.65rem 1rem;font-size:.82rem;border-radius:0 3px 3px 0;}
+    .error.show{display:block;}
+
+    /* ─── FOOTER ─── */
+    footer{background:var(--ink);padding:3rem 5% 2rem;color:rgba(255,255,255,.5);}
+    .footer-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:3rem;margin-bottom:2.5rem;}
+    .footer-brand-logo{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:#fff;margin-bottom:.7rem;}
+    .footer-brand-logo em{color:var(--gold);font-style:normal;}
+    .footer-brand-desc{font-size:.82rem;line-height:1.7;max-width:240px;}
+    .footer-col-title{color:rgba(255,255,255,.8);font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:1rem;}
+    .footer-links{list-style:none;display:flex;flex-direction:column;gap:.5rem;}
+    .footer-links a{color:rgba(255,255,255,.45);font-size:.82rem;text-decoration:none;transition:color .2s;}
+    .footer-links a:hover{color:#fff;}
+    .footer-bottom{max-width:1200px;margin:0 auto;border-top:1px solid rgba(255,255,255,.08);padding-top:1.5rem;display:flex;align-items:center;justify-content:space-between;font-size:.78rem;}
+
+    /* ─── REVEAL ─── */
+    .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease;}
+    .reveal.visible{opacity:1;transform:translateY(0);}
+    .reveal-delay-1{transition-delay:.1s;}
+    .reveal-delay-2{transition-delay:.2s;}
+    .reveal-delay-3{transition-delay:.3s;}
+
+    /* ─── RESPONSIVE ─── */
+    @media(max-width:900px){
+      .hero-inner{grid-template-columns:1fr;}
+      .hero-visual{display:none;}
+      .how-grid,.testi-grid,.pricing-grid{grid-template-columns:1fr;}
+      .features-grid{grid-template-columns:1fr;}
+      .feat-card.featured{grid-column:span 1;grid-template-columns:1fr;}
+      .footer-inner{grid-template-columns:1fr 1fr;gap:2rem;}
+    }
+    @media(max-width:640px){
+      :root{--section-gap:4.5rem;}
+      nav{padding:1rem 4%;}
+      .nav-links{display:none;}
+      .nav-mobile-btn{display:block;}
+      .strip{gap:1.5rem;padding:1.2rem 4%;}
+      .hero{padding:7rem 4% 4rem;}
+      .price-card.highlight{transform:none;}
+      .footer-inner{grid-template-columns:1fr;}
+      .footer-bottom{flex-direction:column;gap:.5rem;text-align:center;}
+      .cta-actions,.hero-actions{flex-direction:column;align-items:flex-start;}
+      .cta-actions{align-items:center;}
+    }
+  
+/* ══════════════════════════════════════════════════════
+   APPLE DESIGN — capa de mejoras (fluidez, materiales,
+   tipografía, feedback). No cambia estructura ni lógica,
+   solo refina cómo se mueve y respira la interfaz.
+   ══════════════════════════════════════════════════════ */
+:root{
+  --ease-spring: cubic-bezier(.32,.72,0,1);       /* damping ~1.0, sin rebote */
+  --ease-spring-bounce: cubic-bezier(.34,1.56,.64,1); /* solo para lo que llega con momentum */
+  --ease-out: cubic-bezier(.16,1,.3,1);
+}
+
+@media (prefers-reduced-motion: no-preference){
+  /* Respuesta instantánea: presionar se siente antes de soltar */
+  .btn-primary,.btn-ghost,.btn-gold,.btn-sm,.btn-dl,.cat-pill,.pin-key,
+  .sb-item,.rol-card,.mesa-card,.qr-card,.order-card,.stat-card,
+  .modal-close,.btn-logout,.hamburger{
+    transition:transform .12s var(--ease-spring),background-color .2s var(--ease-out),
+      border-color .2s var(--ease-out),box-shadow .2s var(--ease-out),color .2s var(--ease-out);
+  }
+  .btn-primary:active,.btn-gold:active,.btn-dl:active,.btn-ghost:active,
+  .btn-sm:active,.cat-pill:active,.pin-key:active,.modal-close:active,
+  .btn-logout:active,.hamburger:active{
+    transform:scale(.96);
+    transition-duration:.08s;
+  }
+  .rol-card:active,.mesa-card:active,.qr-card:active{transform:scale(.985);transition-duration:.1s;}
+
+  .sidebar{transition:transform .38s var(--ease-spring);}
+  .modal-overlay{transition:opacity .28s var(--ease-out),backdrop-filter .28s var(--ease-out);}
+  .modal{transition:transform .38s var(--ease-spring-bounce),opacity .28s var(--ease-out);}
+  .toast{transition:transform .42s var(--ease-spring-bounce),opacity .25s var(--ease-out);}
+  .toggle .slider,.toggle .slider::before{transition:background-color .25s var(--ease-out),transform .3s var(--ease-spring);}
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;}
+  .modal-overlay,.modal,.toast{transition:opacity .15s linear!important;transform:none!important;}
+}
+
+/* Materiales translúcidos — cristal, no bloques opacos */
+.mobile-header{
+  background:rgba(45,90,61,.72);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  box-shadow:none;
+}
+.modal-overlay{backdrop-filter:blur(10px) saturate(140%);-webkit-backdrop-filter:blur(10px) saturate(140%);}
+.toast{
+  background:rgba(15,14,11,.86);
+  backdrop-filter:blur(16px) saturate(160%);
+  -webkit-backdrop-filter:blur(16px) saturate(160%);
+  border:1px solid rgba(255,255,255,.08);
+}
+.toast.success{background:rgba(45,90,61,.88);}
+.toast.error{background:rgba(194,74,43,.88);}
+
+/* Tipografía — tracking/leading específico por tamaño, no un valor fijo */
+.page-title{letter-spacing:-.025em;line-height:1.08;}
+.stat-val,.order-mesa,.mesa-num,.qr-label{letter-spacing:-.02em;}
+.modal-title{letter-spacing:-.02em;line-height:1.15;}
+.page-sub,.card-sub,.stat-sub{letter-spacing:.005em;line-height:1.5;}
+.sb-item,.btn-primary,.btn-ghost,.btn-gold{letter-spacing:.002em;}
+
+/* Origen espacial — el modal nace desde donde se le llama, no desde el centro */
+.modal-overlay.open .modal{transform:translateY(0) scale(1);}
+.modal{transform:translateY(12px) scale(.98);}
+
+/* Foco accesible, coherente con el resto del sistema */
+.btn-primary:focus-visible,.btn-ghost:focus-visible,.btn-gold:focus-visible,
+.sb-item:focus-visible,.cat-pill:focus-visible{
+  outline:2px solid var(--gold);outline-offset:2px;
+}
+
+/* Modo app iOS (Add to Home Screen) — respeta notch / isla dinámica */
+@supports (padding-top: env(safe-area-inset-top)){
+  .mobile-header{padding-top:env(safe-area-inset-top);height:calc(56px + env(safe-area-inset-top));}
+  .toast{margin-bottom:env(safe-area-inset-bottom);}
+}
+
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="mainNav">
+  <a href="#" class="nav-logo">
+    <img src="./img/cartea.png" alt="Cartéa" style="height:38px;">
+  </a>
+  <div class="nav-links">
+    <a href="#como-funciona">Cómo funciona</a>
+    <a href="#funcionalidades">Funcionalidades</a>
+    <a href="#precios">Precios</a>
+    <a href="#" class="nav-cta" id="navAccederBtn">Acceder →</a>
+  </div>
+  <button class="nav-mobile-btn" id="navMobileBtn" aria-label="Menú">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="inicio">
+  <div class="hero-blob1"></div>
+  <div class="hero-blob2"></div>
+  <div class="hero-texture"></div>
+  <div class="hero-inner">
+    <div>
+      <div class="hero-eyebrow">La carta digital que funciona</div>
+      <h1 class="hero-title">Tu restaurante,<br>en el bolsillo de <em>cada cliente</em></h1>
+      <p class="hero-desc">Sin apps. Sin esperas. Sin complicaciones. Los clientes escanean el QR de su mesa y pueden ver la carta, hacer pedidos y llamar al camarero al instante.</p>
+      <div class="hero-actions">
+        <a href="#" class="btn-primary" id="heroBtn">Empieza gratis hoy →</a>
+        <a href="menu.html?demo" class="btn-ghost" target="_blank" rel="noopener">Ver una carta de ejemplo <span>→</span></a>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-stats">
+        <div class="hero-stats-num">3 min</div>
+        <div class="hero-stats-label">Tiempo de configuración</div>
+      </div>
+      <div class="hero-card-wrap">
+        <div class="mock-card">
+          <div class="mock-header">
+            <span class="mock-resto-name">La Trattoria</span>
+            <span class="mock-table-badge">Mesa 4</span>
+          </div>
+          <div class="mock-body">
+            <div class="mock-cat">🍝 Principales</div>
+            <div class="mock-item">
+              <div class="mock-emoji">🍝</div>
+              <div class="mock-item-info"><div class="mock-item-name">Pasta alla Norma</div><div class="mock-item-desc">Berenjena, tomate, ricotta salada</div></div>
+              <div class="mock-item-price">14,50€</div>
+              <div class="mock-add-btn">+</div>
+            </div>
+            <div class="mock-item">
+              <div class="mock-emoji">🥩</div>
+              <div class="mock-item-info"><div class="mock-item-name">Tagliata di manzo</div><div class="mock-item-desc">Con rúcula y parmesano</div></div>
+              <div class="mock-item-price">22,00€</div>
+              <div class="mock-add-btn">+</div>
+            </div>
+            <div class="mock-item">
+              <div class="mock-emoji">🐟</div>
+              <div class="mock-item-info"><div class="mock-item-name">Branzino al forno</div><div class="mock-item-desc">Con patatas y alcaparras</div></div>
+              <div class="mock-item-price">19,00€</div>
+              <div class="mock-add-btn">+</div>
+            </div>
+          </div>
+          <div class="mock-footer">
+            <div><div class="mock-footer-label">Tu pedido</div><div class="mock-footer-total">36,50 €</div></div>
+            <div class="mock-footer-btn">Pedir →</div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-float-badge"><span class="hero-float-dot"></span><span>Pedido recibido en cocina</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- STRIP -->
+<div class="strip">
+  <div class="strip-item"><span class="strip-icon">⚡</span><span>Pedidos a cocina <strong>en tiempo real</strong></span></div>
+  <div class="strip-item"><span class="strip-icon">📲</span><span>QR único <strong>por mesa</strong></span></div>
+  <div class="strip-item"><span class="strip-icon">🚫</span><span><strong>Sin apps</strong> ni registros</span></div>
+  <div class="strip-item"><span class="strip-icon">📊</span><span>Panel de control <strong>completo</strong></span></div>
+  <div class="strip-item"><span class="strip-icon">🌐</span><span>Funciona en <strong>cualquier móvil</strong></span></div>
+</div>
+
+<!-- CÓMO FUNCIONA -->
+<section id="como-funciona" class="how">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">Proceso simplificado</div>
+      <h2 class="section-title">En marcha en menos<br>de 5 minutos</h2>
+      <p class="section-sub">Sin instalaciones, sin contratos, sin hardware. Crea tu cuenta, sube la carta y genera los QR.</p>
+    </div>
+    <div class="how-grid">
+      <div class="how-step reveal reveal-delay-1">
+        <div class="step-num">01</div><div class="step-icon">🏪</div>
+        <div class="step-title">Crea tu restaurante</div>
+        <div class="step-desc">Registra tu restaurante en segundos. Añade el nombre y ya tienes tu panel listo.</div>
+      </div>
+      <div class="how-step reveal reveal-delay-2">
+        <div class="step-num">02</div><div class="step-icon">🍽️</div>
+        <div class="step-title">Sube tu carta digital</div>
+        <div class="step-desc">Añade categorías, platos, precios y alérgenos desde el panel. Los cambios se ven al instante.</div>
+      </div>
+      <div class="how-step reveal reveal-delay-3">
+        <div class="step-num">03</div><div class="step-icon">📲</div>
+        <div class="step-title">Imprime y coloca los QR</div>
+        <div class="step-desc">Descarga los QR únicos de cada mesa, imprímelos y colócalos. Los clientes escanean y ya está.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FUNCIONALIDADES -->
+<section id="funcionalidades">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">Funcionalidades clave</div>
+      <h2 class="section-title">Todo lo que necesitas,<br>nada de lo que no</h2>
+    </div>
+    <div class="features-grid">
+      <div class="feat-card featured reveal">
+        <div>
+          <div class="feat-card-icon">⚡</div>
+          <div class="feat-card-title">Pedidos a cocina en tiempo real</div>
+          <div class="feat-card-desc">Los pedidos llegan al momento a la pantalla de cocina, con sonido y ordenados por llegada. Sin papel y sin tener que tocar nada: la cocina solo marca "Listo".</div>
+        </div>
+        <div class="feat-card-visual">
+          <div class="feat-stat"><div class="feat-stat-num">0 €</div><div class="feat-stat-label">En hardware: vale cualquier móvil o tablet</div></div>
+          <div class="feat-stat"><div class="feat-stat-num">0 apps</div><div class="feat-stat-label">Que instalar, ni para clientes ni para el equipo</div></div>
+          <div class="feat-stat"><div class="feat-stat-num">1 QR</div><div class="feat-stat-label">Por mesa: el pedido llega con su número</div></div>
+        </div>
+      </div>
+      <div class="feat-card reveal reveal-delay-1">
+        <div class="feat-card-icon">📋</div>
+        <div class="feat-card-title">Carta siempre al día, con alérgenos</div>
+        <div class="feat-card-desc">Cambia precios, añade platos o marca algo como agotado en segundos, sin reimprimir nada. Cada plato muestra sus alérgenos, como pide la normativa.</div>
+      </div>
+      <div class="feat-card reveal reveal-delay-2">
+        <div class="feat-card-icon">👥</div>
+        <div class="feat-card-title">Todo el equipo conectado</div>
+        <div class="feat-card-desc">Cada trabajador entra desde su móvil con su PIN. El camarero recibe con vibración cuando una mesa le llama, pide la cuenta o un plato está listo. La barra ve solo las bebidas.</div>
+      </div>
+      <div class="feat-card reveal reveal-delay-1">
+        <div class="feat-card-icon">📊</div>
+        <div class="feat-card-title">Panel y ventas</div>
+        <div class="feat-card-desc">Pedidos activos, avisos y lo vendido hoy, en tiempo real. Con Pro: ventas por hora y por día, platos más vendidos y descarga para Excel.</div>
+      </div>
+      <div class="feat-card reveal reveal-delay-2">
+        <div class="feat-card-icon">🌍</div>
+        <div class="feat-card-title">Carta en español e inglés</div>
+        <div class="feat-card-desc">Con Pro, si el móvil del cliente está en inglés, la carta aparece en inglés (tú escribes las traducciones de cada plato). Ideal para zonas turísticas.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PREGUNTAS FRECUENTES -->
+<section style="background:var(--warm);" id="preguntas">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">Dudas habituales</div>
+      <h2 class="section-title">Preguntas frecuentes</h2>
+    </div>
+    <div class="faq-list reveal">
+      <details class="faq"><summary>¿Mis clientes tienen que descargar algo?</summary><p>No. Escanean el QR de la mesa con la cámara del móvil y la carta se abre en el navegador. Sin apps y sin registrarse.</p></details>
+      <details class="faq"><summary>¿Qué necesito para la cocina?</summary><p>Cualquier tablet, móvil u ordenador con navegador. Abres la "Pantalla de cocina" desde tu panel y los pedidos entran solos, con aviso sonoro.</p></details>
+      <details class="faq"><summary>¿Y si un cliente prefiere pedir al camarero?</summary><p>Perfecto: la carta digital no sustituye al camarero. Además, desde la carta el cliente puede llamarle o pedir la cuenta con un toque.</p></details>
+      <details class="faq"><summary>¿Cómo funcionan los alérgenos?</summary><p>En cada plato marcas cuáles de los 14 alérgenos de declaración obligatoria contiene, y el cliente los ve junto al plato. La información la pones tú: revisa que esté al día.</p></details>
+      <details class="faq"><summary>¿Puedo cambiar de plan o darme de baja?</summary><p>Sí, cuando quieras y sin permanencia. Empiezas gratis en el plan Básico; si quieres Pro, nos escribes desde tu panel y lo activamos.</p></details>
+      <details class="faq"><summary>¿Quién ve los datos de mi equipo?</summary><p>Solo tú, desde tu panel. Cada trabajador ve únicamente su propia ficha al entrar con su PIN.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- PRECIOS -->
+<section class="pricing" id="precios">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">Planes y precios</div>
+      <h2 class="section-title">Transparente y sin sorpresas</h2>
+      <p class="section-sub">Empieza gratis. Sin tarjeta de crédito. Sin permanencia.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card reveal reveal-delay-1">
+        <div class="price-badge">Gratis</div>
+        <div class="price-name">Básico</div>
+        <div class="price-amount">0€</div>
+        <div class="price-period">para siempre</div>
+        <ul class="price-features">
+          <li><span class="price-check">✓</span> Hasta 5 mesas</li>
+          <li><span class="price-check">✓</span> Carta digital ilimitada, con alérgenos</li>
+          <li><span class="price-check">✓</span> QR por mesa</li>
+          <li><span class="price-check">✓</span> Pedidos y pantalla de cocina</li>
+          <li><span class="price-check">✓</span> Equipo con acceso por PIN</li>
+          <li style="opacity:.4">✗ Ventas y estadísticas</li>
+          <li style="opacity:.4">✗ Carta en inglés</li>
+        </ul>
+        <a href="#" class="price-btn" id="priceFreeBtn">Empezar gratis →</a>
+      </div>
+      <div class="price-card highlight reveal reveal-delay-2">
+        <div class="price-badge">Más completo</div>
+        <div class="price-name">Pro</div>
+        <div class="price-amount">29€</div>
+        <div class="price-period">al mes · sin permanencia</div>
+        <ul class="price-features">
+          <li><span class="price-check">✓</span> Todo lo del plan Básico</li>
+          <li><span class="price-check">✓</span> Hasta 200 mesas</li>
+          <li><span class="price-check">✓</span> Ventas: por hora, por día y por plato</li>
+          <li><span class="price-check">✓</span> Descarga de ventas para Excel</li>
+          <li><span class="price-check">✓</span> Carta en español e inglés</li>
+          <li><span class="price-check">✓</span> Soporte por email</li>
+        </ul>
+        <a href="#" class="price-btn" id="priceProBtn">Empezar →</a>
+        <div style="font-size:.7rem;margin-top:.7rem;opacity:.7;text-align:center;">Creas tu cuenta gratis y activas Pro desde tu panel</div>
+      </div>
+      <div class="price-card reveal reveal-delay-3">
+        <div class="price-badge">Grupos</div>
+        <div class="price-name">Varios locales</div>
+        <div class="price-amount">Hablemos</div>
+        <div class="price-period">precio según número de locales</div>
+        <ul class="price-features">
+          <li><span class="price-check">✓</span> Todo lo de Pro en cada local</li>
+          <li><span class="price-check">✓</span> Ayuda con la puesta en marcha</li>
+          <li><span class="price-check">✓</span> Atención directa</li>
+        </ul>
+        <a href="mailto:hola@mesaqr.com?subject=Cart%C3%A9a%20para%20varios%20locales" class="price-btn">Contactar →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-banner">
+  <div class="section-eyebrow">Sin riesgos</div>
+  <h2 class="cta-title">Transforma tu restaurante hoy mismo</h2>
+  <p class="cta-sub">Configura tu carta en minutos. Sin tarjeta. Sin permanencia.</p>
+  <div class="cta-actions">
+    <a href="#" class="btn-white" id="ctaBtn">Crear mi cuenta gratis →</a>
+    <a href="menu.html?demo" class="btn-outline-white" target="_blank" rel="noopener">Probar la carta de ejemplo</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <img src="./img/cartea.png" alt="Cartéa" style="height:36px;display:block;">
+      <p class="footer-brand-desc">La carta digital que transforma la experiencia en tu restaurante. Sin apps. Sin esperas.</p>
+    </div>
+    <div>
+      <div class="footer-col-title">Producto</div>
+      <ul class="footer-links">
+        <li><a href="#como-funciona">Cómo funciona</a></li>
+        <li><a href="#funcionalidades">Funcionalidades</a></li>
+        <li><a href="#precios">Precios</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">Ayuda</div>
+      <ul class="footer-links">
+        <li><a href="#preguntas">Preguntas frecuentes</a></li>
+        <li><a href="mailto:hola@mesaqr.com">Contacto: hola@mesaqr.com</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">Legal</div>
+      <ul class="footer-links">
+        <li><a href="aviso-legal.html">Aviso legal</a></li>
+        <li><a href="privacidad.html">Privacidad</a></li>
+        <li><a href="cookies.html">Cookies</a></li>
+        <li><a href="terminos.html">Términos de uso</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Cartéa. Todos los derechos reservados.</span>
+    <span>Hecho con ♥ para la hostelería española</span>
+  </div>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <button class="modal-close" id="modalCloseBtn">×</button>
+    <img src="./img/cartea.png" alt="Cartéa" style="height:40px;display:block;margin:0 auto .25rem;">
+    <div class="modal-eyebrow">Panel de restaurante</div>
+    <div class="tabs">
+      <button class="tab active" id="tabLoginBtn">Entrar</button>
+      <button class="tab" id="tabRegisterBtn">Crear cuenta</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="tab-login">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="tu@restaurante.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <div class="pass-wrap">
+          <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"/>
+          <button type="button" class="eye-btn" data-target="loginPass" tabindex="-1">
+            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="eye-off-icon" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="error" id="loginError"></div>
+      <div class="ok-msg" id="loginOk"></div>
+      <button class="btn-form" id="loginBtn">Entrar →</button>
+      <div style="text-align:center;margin-top:.9rem;"><button type="button" class="link-btn" id="forgotBtn">¿Has olvidado tu contraseña?</button></div>
+    </div>
+
+    <!-- REGISTRO -->
+    <div id="tab-register" style="display:none">
+      <div class="field">
+        <label>Nombre del restaurante</label>
+        <input type="text" id="regNombre" placeholder="Ej: La Trattoria" autocomplete="organization"/>
+      </div>
+      <div class="field">
+        <label>Tu nombre</label>
+        <input type="text" id="regPersona" placeholder="Ej: María García" autocomplete="name"/>
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="regEmail" placeholder="tu@email.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <div class="pass-wrap">
+          <input type="password" id="regPass" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/>
+          <button type="button" class="eye-btn" data-target="regPass" tabindex="-1">
+            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="eye-off-icon" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Repetir contraseña</label>
+        <div class="pass-wrap">
+          <input type="password" id="regPass2" placeholder="Repite tu contraseña" autocomplete="new-password"/>
+          <button type="button" class="eye-btn" data-target="regPass2" tabindex="-1">
+            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="eye-off-icon" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+      </div>
+      <label class="check-row"><input type="checkbox" id="regTerms"/> <span>He leído y acepto los <a href="terminos.html" target="_blank">términos de uso</a> y la <a href="privacidad.html" target="_blank">política de privacidad</a>.</span></label>
+      <div class="error" id="regError"></div>
+      <button class="btn-form" id="regBtn">Crear mi restaurante →</button>
+      <div style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:.8rem;line-height:1.5;">Empiezas gratis en el plan Básico. Puedes pasar a Pro cuando quieras desde tu panel.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCRIPT 1 – UI (sin dependencias externas)
+     Corre inmediatamente, sin esperar Firebase
+════════════════════════════════════════════ -->
+<script>
+(function() {
+  'use strict';
+
+  /* ── Nav scroll ── */
+  window.addEventListener('scroll', function() {
+    document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 40);
+  });
+
+  /* ── Modal ── */
+  var overlay = document.getElementById('modalOverlay');
+
+  function openModal(tab) {
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    switchTab(tab || 'login');
+  }
+  function closeModal() {
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function switchTab(tab) {
+    var login = tab === 'login';
+    document.getElementById('tab-login').style.display    = login ? 'block' : 'none';
+    document.getElementById('tab-register').style.display = login ? 'none'  : 'block';
+    document.getElementById('tabLoginBtn').classList.toggle('active',  login);
+    document.getElementById('tabRegisterBtn').classList.toggle('active', !login);
+  }
+
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  document.getElementById('tabLoginBtn').addEventListener('click', function() { switchTab('login'); });
+  document.getElementById('tabRegisterBtn').addEventListener('click', function() { switchTab('register'); });
+
+  /* Botones CTA → abren modal en pestaña correcta */
+  var loginTriggers    = ['navAccederBtn', 'navMobileBtn'];
+  var registerTriggers = ['heroBtn', 'ctaBtn', 'priceFreeBtn', 'priceProBtn'];
+  loginTriggers.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', function(e) { e.preventDefault(); openModal('login'); });
+  });
+  registerTriggers.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', function(e) { e.preventDefault(); openModal('register'); });
+  });
+
+  /* ── Eye toggle (delegación de eventos) ── */
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.eye-btn');
+    if (!btn) return;
+    e.preventDefault();
+    var input = document.getElementById(btn.getAttribute('data-target'));
+    if (!input) return;
+    var show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.querySelector('.eye-icon').style.display     = show ? 'none' : 'block';
+    btn.querySelector('.eye-off-icon').style.display = show ? 'block' : 'none';
+  });
+
+  /* ── Scroll reveal ── */
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach(function(el) { io.observe(el); });
+  } else {
+    document.querySelectorAll('.reveal').forEach(function(el) { el.classList.add('visible'); });
+  }
+
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════
+     SCRIPT 2 – Firebase (módulo ES6, async)
+     NO bloquea la UI. Se carga en paralelo.
+════════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp }
+  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail,
+         createUserWithEmailAndPassword, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getFirestore, doc, setDoc }
+  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+const FB_CONFIG = {
+  apiKey:            'AIzaSyDhzw8E0kZh_NMrtixCtfpZ2rKQ9w0VpnM',
+  authDomain:        'mesaqr-73606.firebaseapp.com',
+  projectId:         'mesaqr-73606',
+  storageBucket:     'mesaqr-73606.firebasestorage.app',
+  messagingSenderId: '717696646582',
+  appId:             '1:717696646582:web:25caf894e3597a51401517'
+};
+
+const app  = initializeApp(FB_CONFIG);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+let isRegistering = false;
+
+/* Si el usuario ya está autenticado, redirigir al dashboard */
+/* (Las sesiones anónimas son de clientes/equipo que abrieron la carta en este navegador: no cuentan.) */
+onAuthStateChanged(auth, (user) => {
+  if (!isRegistering && user && !user.isAnonymous) location.href = 'dashboard.html';
+});
+
+/* ── OLVIDÉ MI CONTRASEÑA ── */
+document.getElementById('forgotBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const err = document.getElementById('loginError');
+  const ok  = document.getElementById('loginOk');
+  err.classList.remove('show'); ok.classList.remove('show');
+  if (!email) {
+    err.textContent = 'Escribe tu email arriba y vuelve a pulsar aquí';
+    err.classList.add('show'); return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+  } catch (e) {
+    if (e.code === 'auth/invalid-email') { err.textContent = 'El formato del email no es válido'; err.classList.add('show'); return; }
+    if (e.code === 'auth/network-request-failed') { err.textContent = 'Error de conexión. Comprueba tu internet'; err.classList.add('show'); return; }
+  }
+  // Mismo mensaje exista o no la cuenta (así nadie puede averiguar qué emails están registrados)
+  ok.textContent = 'Si hay una cuenta con ese email, te llegará un enlace para crear una contraseña nueva. Revisa también la carpeta de spam.';
+  ok.classList.add('show');
+});
+
+/* ── LOGIN ── */
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  const err   = document.getElementById('loginError');
+  const btn   = document.getElementById('loginBtn');
+  err.classList.remove('show');
+
+  if (!email || !pass) {
+    err.textContent = 'Rellena todos los campos';
+    err.classList.add('show'); return;
+  }
+  btn.disabled = true; btn.textContent = 'Entrando...';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+    // onAuthStateChanged se encarga de redirigir
+  } catch (e) {
+    const MAP = {
+      'auth/invalid-credential':     'Email o contraseña incorrectos',
+      'auth/user-not-found':         'No existe una cuenta con este email',
+      'auth/wrong-password':         'Contraseña incorrecta',
+      'auth/invalid-email':          'El formato del email no es válido',
+      'auth/user-disabled':          'Esta cuenta ha sido desactivada',
+      'auth/too-many-requests':      'Demasiados intentos. Espera unos minutos',
+      'auth/network-request-failed': 'Error de conexión. Comprueba tu internet',
+    };
+    err.textContent = MAP[e.code] || `Error al iniciar sesión (${e.code})`;
+    err.classList.add('show');
+    btn.disabled = false; btn.textContent = 'Entrar →';
+  }
+});
+['loginEmail','loginPass'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('loginBtn').click(); }
+  });
+});
+
+/* ── REGISTRO ── */
+document.getElementById('regBtn').addEventListener('click', async () => {
+  const nombre  = document.getElementById('regNombre').value.trim();
+  const persona = document.getElementById('regPersona').value.trim();
+  const email   = document.getElementById('regEmail').value.trim();
+  const pass    = document.getElementById('regPass').value;
+  const pass2   = document.getElementById('regPass2').value;
+  const err     = document.getElementById('regError');
+  const btn     = document.getElementById('regBtn');
+  err.classList.remove('show');
+
+  if (!nombre || !persona || !email || !pass || !pass2) {
+    err.textContent = 'Rellena todos los campos';
+    err.classList.add('show'); return;
+  }
+  if (pass.length < 6) {
+    err.textContent = 'La contraseña debe tener al menos 6 caracteres';
+    err.classList.add('show'); return;
+  }
+  if (pass !== pass2) {
+    err.textContent = 'Las contraseñas no coinciden';
+    err.classList.add('show'); return;
+  }
+  if (!document.getElementById('regTerms').checked) {
+    err.textContent = 'Tienes que aceptar los términos y la política de privacidad';
+    err.classList.add('show'); return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Creando cuenta...';
+  isRegistering = true;
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    await setDoc(doc(db, 'restaurantes', cred.user.uid), {
+      nombre, persona, mesas: 5, plan: 'basico',
+      cats: ['Entrantes','Principales','Postres','Bebidas'],
+      creadoEn: new Date().toISOString(), uid: cred.user.uid,
+      terminosAceptados: new Date().toISOString()
+    });
+    // Unos platos de ejemplo para que la carta no salga vacía (se pueden borrar)
+    const defaults = [
+      { nombre: 'Plato del día',  desc: 'Consultar con el camarero', precio: 10,  emoji: '🍽️', categoria: 'Principales', activo: true, alergenos: [] },
+      { nombre: 'Agua mineral',   desc: '50 cl, con o sin gas',      precio: 2,   emoji: '💧',  categoria: 'Bebidas',     activo: true, alergenos: [] },
+      { nombre: 'Refresco',       desc: 'Cola, naranja o limón',     precio: 2.5, emoji: '🥤',  categoria: 'Bebidas',     activo: true, alergenos: [] },
+    ];
+    for (const item of defaults) {
+      await setDoc(doc(db, 'restaurantes', cred.user.uid, 'menu', item.nombre.replace(/\s/g, '_')), item);
+    }
+    location.href = 'dashboard.html';
+  } catch (e) {
+    isRegistering = false;
+    const MAP = {
+      'auth/email-already-in-use':   'Este email ya está registrado',
+      'auth/invalid-email':          'El formato del email no es válido',
+      'auth/weak-password':          'La contraseña es demasiado débil',
+      'auth/network-request-failed': 'Error de conexión. Comprueba tu internet',
+    };
+    err.textContent = MAP[e.code] || `Error al crear la cuenta (${e.code})`;
+    err.classList.add('show');
+    btn.disabled = false; btn.textContent = 'Crear mi restaurante →';
+  }
+});
+['regNombre','regPersona','regEmail','regPass','regPass2'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('regBtn').click(); }
+  });
+});
+</script>
+</body>
+</html>

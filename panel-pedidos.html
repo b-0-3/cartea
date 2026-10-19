@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" href="./img/carteafondo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Cartéa – Pedidos en vivo</title>
+  <!-- Modo app al añadir a pantalla de inicio (iOS) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cartéa">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2d5a3d">
+  <link rel="apple-touch-icon" href="./img/carteafondo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="app-loading" id="appLoading">
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:52px;display:block;">
+  <div class="al-dots"><span class="al-dot"></span><span class="al-dot"></span><span class="al-dot"></span></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+  <button class="hamburger" id="hamburgerBtn">☰</button>
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:34px;display:block;">
+  <span class="sb-badge" id="mobileBadge" style="display:none;margin-left:auto">0</span>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-inner">
+    <div class="sb-header">
+      <img src="./img/carteablanco.png" alt="Cartéa" style="height:48px;display:block;margin-bottom:.3rem;">
+      <div class="sb-name" id="sidebarNombre">Cargando…</div>
+    </div>
+    <div class="sb-divider"></div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar" id="sbAvatar">–</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sbPersona">–</div>
+          <div class="sb-user-role">Administrador</div>
+        </div>
+      </div>
+      <button class="btn-logout" id="logoutBtn">⎋ &nbsp;Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="page active">
+
+    <div class="page-hd">
+      <div class="page-eyebrow">Tiempo real</div>
+      <div class="page-title">Pedidos en vivo</div>
+      <div class="page-sub">Gestiona el estado de cada pedido desde aquí</div>
+    </div>
+    <div class="orders-cols">
+      <div>
+        <div class="col-hd nuevo"><div class="col-dot nuevo"></div>Nuevos<span class="col-count" id="count-nuevo">0</span></div>
+        <div class="orders-col" id="col-nuevo"><div class="empty-col"><span>📭</span>Sin pedidos nuevos</div></div>
+      </div>
+      <div>
+        <div class="col-hd preparando"><div class="col-dot preparando"></div>Preparando<span class="col-count" id="count-preparando">0</span></div>
+        <div class="orders-col" id="col-preparando"><div class="empty-col"><span>🍳</span>Cocina libre</div></div>
+      </div>
+      <div>
+        <div class="col-hd listo"><div class="col-dot listo"></div>Listos<span class="col-count" id="count-listo">0</span></div>
+        <div class="orders-col" id="col-listo"><div class="empty-col"><span>✅</span>Sin pedidos listos</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd">
+        <div><div class="card-title">Pedidos de hoy</div><div class="card-sub" id="hoyResumen">Servidos y cancelados desde las 5:00</div></div>
+        <a href="panel-ventas.html" class="btn-ghost btn-sm">Ver ventas →</a>
+      </div>
+      <div class="card-body p0" id="completadosList"><div class="empty" style="padding:1.5rem"><div class="empty-icon">📦</div><strong>Aún no hay pedidos cerrados hoy</strong></div></div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+
+import { initPanel, db } from './js/panel-core.js';
+import { collection, onSnapshot, doc, updateDoc, query, where, serverTimestamp, Timestamp }
+  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { escapeHtml, eur, horaDe, inicioJornada, alCambiarJornada, ESTADOS_ACTIVOS, AUTO_COMPLETAR_MIN } from './js/common.js';
+
+let uid = null;
+let activos = [];
+let jornada = [];
+
+function itemsHtml(p) {
+  return (p.items||[]).map(i=>`<div class="order-item-row"><span class="order-qty">${Number(i.qty)||0}×</span><span>${escapeHtml(i.nombre)}</span></div>`).join('');
+}
+
+function renderCol(elId, pedidos, estado) {
+  const el = document.getElementById(elId);
+  if (!pedidos.length) {
+    const labels = {nuevo:'📭 Sin pedidos nuevos', preparando:'🍳 Cocina libre', listo:'✅ Nada pendiente de servir'};
+    el.innerHTML = `<div class="empty-col">${labels[estado]||''}</div>`;
+    return;
+  }
+  el.innerHTML = pedidos.map(p => `
+    <div class="order-card ${estado}">
+      <div class="order-top">
+        <span class="order-mesa">Mesa ${escapeHtml(p.mesa)}</span>
+        <span class="order-time">${horaDe(p.timestamp)}</span>
+      </div>
+      <div class="order-items-list">${itemsHtml(p)}</div>
+      ${p.nota ? `<div class="order-nota">📝 ${escapeHtml(p.nota)}</div>` : ''}
+      <div class="order-footer">
+        <span class="order-total">${eur(p.total)}</span>
+        <div class="order-btns">
+          ${estado==='nuevo' ? `<button class="btn-sm btn-gold-sm" data-estado="preparando" data-id="${escapeHtml(p.id)}">▶ A cocina</button>` : ''}
+          ${estado==='preparando' ? `<button class="btn-sm btn-success-sm" data-estado="listo" data-id="${escapeHtml(p.id)}">✓ Listo</button>` : ''}
+          ${estado==='listo' ? `<button class="btn-sm btn-success-sm" data-estado="completado" data-id="${escapeHtml(p.id)}">✓ Servido</button>` : ''}
+          <button class="btn-sm btn-danger-sm" data-estado="cancelado" data-id="${escapeHtml(p.id)}" title="Cancelar pedido">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function render() {
+  const nuevo = activos.filter(p => p.estado === 'nuevo');
+  const preparando = activos.filter(p => p.estado === 'preparando');
+  const listo = activos.filter(p => p.estado === 'listo');
+
+  document.getElementById('count-nuevo').textContent = nuevo.length;
+  document.getElementById('count-preparando').textContent = preparando.length;
+  document.getElementById('count-listo').textContent = listo.length;
+
+  renderCol('col-nuevo', nuevo, 'nuevo');
+  renderCol('col-preparando', preparando, 'preparando');
+  renderCol('col-listo', listo, 'listo');
+
+  const cerrados = jornada.filter(p => p.estado === 'completado' || p.estado === 'cancelado')
+    .sort((a,b) => (b.timestamp?.seconds||0) - (a.timestamp?.seconds||0));
+  const servidos = cerrados.filter(p => p.estado === 'completado');
+  document.getElementById('hoyResumen').textContent =
+    `${servidos.length} servido${servidos.length===1?'':'s'} · ${cerrados.length - servidos.length} cancelado${cerrados.length - servidos.length===1?'':'s'} · desde las 5:00`;
+
+  const cl = document.getElementById('completadosList');
+  cl.innerHTML = !cerrados.length
+    ? '<div class="empty" style="padding:1.5rem"><div class="empty-icon">📦</div><strong>Aún no hay pedidos cerrados hoy</strong></div>'
+    : '<div style="overflow-x:auto"><table class="menu-table"><thead><tr><th>Mesa</th><th>Platos</th><th>Total</th><th>Hora</th><th></th></tr></thead><tbody>' +
+      cerrados.map(p => `<tr style="${p.estado==='cancelado'?'opacity:.5':''}">
+        <td style="font-family:'Playfair Display',serif;font-weight:700;white-space:nowrap">Mesa ${escapeHtml(p.mesa)}</td>
+        <td style="font-size:.78rem;color:var(--muted)">${escapeHtml((p.items||[]).map(i=>`${i.qty}× ${i.nombre}`).join(', '))}</td>
+        <td style="font-family:'Playfair Display',serif;font-weight:700;color:var(--green);white-space:nowrap;${p.estado==='cancelado'?'text-decoration:line-through':''}">${eur(p.total)}</td>
+        <td style="font-size:.75rem;color:var(--muted)">${horaDe(p.timestamp)}</td>
+        <td style="font-size:.7rem;color:var(--muted)">${p.estado==='cancelado'?'Cancelado':''}</td>
+      </tr>`).join('') + '</tbody></table></div>';
+}
+
+async function cambiarEstado(id, estado) {
+  if (estado === 'cancelado' && !confirm('¿Cancelar este pedido? No contará en las ventas.')) return;
+  const data = { estado };
+  if (estado === 'listo') data.listoEn = serverTimestamp();
+  try { await updateDoc(doc(db,'restaurantes',uid,'pedidos',id), data); }
+  catch (e) { showToast('No se pudo actualizar', 'error'); }
+}
+
+document.querySelector('.main').addEventListener('click', e => {
+  const b = e.target.closest('[data-estado]');
+  if (b) cambiarEstado(b.dataset.id, b.dataset.estado);
+});
+
+initPanel().then(({ uid: u }) => {
+  uid = u;
+  const ref = collection(db, 'restaurantes', uid, 'pedidos');
+  onSnapshot(query(ref, where('estado','in',ESTADOS_ACTIVOS)), snap => {
+    activos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a,b) => (a.timestamp?.seconds||0) - (b.timestamp?.seconds||0));
+    render();
+  });
+  let unsubJ = null;
+  const suscribirJornada = () => {
+    if (unsubJ) unsubJ();
+    unsubJ = onSnapshot(query(ref, where('timestamp','>=', Timestamp.fromDate(inicioJornada()))), snap => {
+      jornada = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    });
+  };
+  suscribirJornada();
+  alCambiarJornada(suscribirJornada);
+
+  // Igual que la pantalla de cocina: lo "listo" sin servir se cierra solo a los 30 min.
+  setInterval(() => {
+    const limite = Date.now()/1000 - AUTO_COMPLETAR_MIN*60;
+    activos.forEach(p => {
+      const ref = p.listoEn?.seconds || p.timestamp?.seconds || 0;
+      if (p.estado === 'listo' && ref && ref < limite) {
+        updateDoc(doc(db,'restaurantes',uid,'pedidos',p.id), { estado:'completado' }).catch(()=>{});
+      }
+    });
+  }, 60000);
+});
+
+</script>
+</body>
+</html>

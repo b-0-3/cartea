@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" href="./img/carteafondo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Cartéa – Códigos QR</title>
+  <!-- Modo app al añadir a pantalla de inicio (iOS) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cartéa">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2d5a3d">
+  <link rel="apple-touch-icon" href="./img/carteafondo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/panel.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="app-loading" id="appLoading">
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:52px;display:block;">
+  <div class="al-dots"><span class="al-dot"></span><span class="al-dot"></span><span class="al-dot"></span></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+  <button class="hamburger" id="hamburgerBtn">☰</button>
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:34px;display:block;">
+  <span class="sb-badge" id="mobileBadge" style="display:none;margin-left:auto">0</span>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-inner">
+    <div class="sb-header">
+      <img src="./img/carteablanco.png" alt="Cartéa" style="height:48px;display:block;margin-bottom:.3rem;">
+      <div class="sb-name" id="sidebarNombre">Cargando…</div>
+    </div>
+    <div class="sb-divider"></div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar" id="sbAvatar">–</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sbPersona">–</div>
+          <div class="sb-user-role">Administrador</div>
+        </div>
+      </div>
+      <button class="btn-logout" id="logoutBtn">⎋ &nbsp;Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="page active">
+
+    <div class="page-hd" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <div class="page-eyebrow">Digitalización</div>
+        <div class="page-title">Códigos QR</div>
+        <div class="page-sub">Un QR único por mesa — imprímelos, plastifícalos y colócalos</div>
+      </div>
+      <button class="btn-primary" id="printBtn">🖨 Imprimir todos</button>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-title">QR generados</div><div class="card-sub" id="qrSubtitle">–</div></div>
+      <div class="card-body">
+        <div class="qr-grid" id="qrGrid"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  .qr-hint{font-size:.62rem;color:var(--muted);margin:-.3rem 0 .6rem;}
+  @media print{
+    .page-hd button,.btn-dl,.qr-url,#proHintQr{display:none!important;}
+    .card,.qr-card{border:none!important;box-shadow:none!important;}
+    .qr-grid{grid-template-columns:repeat(3,1fr)!important;gap:.6rem!important;}
+    .qr-card{break-inside:avoid;page-break-inside:avoid;border:1px dashed #bbb!important;}
+  }
+</style>
+<script type="module">
+
+import { initPanel, db, baseUrl } from './js/panel-core.js';
+import { doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { escapeHtml, isPro, mesasEfectivas, mailtoPro, LIMITE_MESAS_BASICO } from './js/common.js';
+
+let uid = null;
+let restoData = null;
+
+function marcarImpresos() {
+  if (restoData && !restoData.qrImpresos) {
+    restoData.qrImpresos = true;
+    updateDoc(doc(db,'restaurantes',uid), { qrImpresos: true }).catch(()=>{});
+  }
+}
+
+document.getElementById('qrGrid').addEventListener('click', e => {
+  const b = e.target.closest('[data-dl]'); if (!b) return;
+  const mesa = b.dataset.dl;
+  const c = document.querySelector('#qr-' + mesa + ' canvas');
+  if (!c) return;
+  const a = document.createElement('a');
+  a.download = 'mesa-' + mesa + '-qr.png';
+  a.href = c.toDataURL();
+  a.click();
+  marcarImpresos();
+});
+document.getElementById('printBtn').addEventListener('click', () => { marcarImpresos(); window.print(); });
+
+initPanel().then(({ uid: u, restoData: rd }) => {
+  uid = u; restoData = rd;
+  const n = mesasEfectivas(restoData);
+  document.getElementById('qrSubtitle').textContent = n + ' códigos';
+  const grid = document.getElementById('qrGrid');
+  grid.innerHTML = '';
+  for (let i = 1; i <= n; i++) {
+    const url = baseUrl + 'menu.html?uid=' + encodeURIComponent(uid) + '&mesa=' + i;
+    const card = document.createElement('div');
+    card.className = 'qr-card';
+    card.innerHTML = `<div class="qr-label">Mesa ${i}</div><div class="qr-hint">Escanea para ver la carta y pedir</div><div class="qr-canvas" id="qr-${i}"></div><div class="qr-url">${escapeHtml(url)}</div><button class="btn-dl" data-dl="${i}">⬇ Descargar</button>`;
+    grid.appendChild(card);
+    setTimeout(() => {
+      new QRCode(document.getElementById('qr-'+i), {text:url,width:140,height:140,colorDark:'#0f0e0b',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+    }, 40 * i);
+  }
+  if (!isPro(restoData) && (Number(restoData.mesas) || 0) > LIMITE_MESAS_BASICO) {
+    const hint = document.createElement('div');
+    hint.id = 'proHintQr';
+    hint.className = 'pro-hint';
+    hint.innerHTML = `En el plan Básico se generan códigos para ${LIMITE_MESAS_BASICO} mesas. <a href="${mailtoPro(restoData)}">Pasar a Pro →</a>`;
+    grid.parentElement.appendChild(hint);
+  }
+});
+
+</script>
+</body>
+</html>

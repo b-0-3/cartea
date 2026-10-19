@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" href="./img/carteafondo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Carta</title>
+  <meta name="theme-color" content="#2d5a3d">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --ink:#0f0e0b; --cream:#faf7f2; --warm:#f2ebe0;
+      --gold:#c8963e; --gold-l:#e8b96a; --gold-bg:rgba(200,150,62,.09);
+      --rust:#c24a2b; --rust-bg:rgba(194,74,43,.09);
+      --green:#2d5a3d; --green-l:#4a8c63; --green-bg:rgba(45,90,61,.09);
+      --muted:#7a746c; --border:rgba(15,14,11,.1);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html{scroll-behavior:smooth;}
+    body{background:var(--cream);color:var(--ink);font-family:'DM Sans',sans-serif;max-width:480px;margin:0 auto;min-height:100vh;}
+
+    /* LOADING */
+    .ls{position:fixed;inset:0;background:var(--green);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;transition:opacity .4s;}
+    .ls.hide{opacity:0;pointer-events:none;}
+    /* same decorative circles as index left panel */
+    .ls::before{content:'';position:absolute;top:-20%;right:-20%;width:70%;padding-top:70%;background:var(--gold-l);opacity:.1;border-radius:50%;}
+    .ls::after{content:'';position:absolute;bottom:-15%;left:-15%;width:55%;padding-top:55%;background:var(--ink);opacity:.15;border-radius:50%;}
+    .ls-logo{font-family:'Playfair Display',serif;font-size:2.4rem;font-weight:900;color:#fff;letter-spacing:-.03em;position:relative;z-index:2;}
+    .ls-logo em{color:var(--gold-l);font-style:normal;}
+    .ls-sub{color:rgba(255,255,255,.55);font-size:.875rem;font-weight:300;position:relative;z-index:2;}
+
+    /* HEADER — green like index left panel */
+    header{
+      background:var(--green);padding:1.2rem 1.3rem 1.1rem;
+      position:sticky;top:0;z-index:50;overflow:hidden;
+    }
+    header::before{content:'';position:absolute;top:-60%;right:-20%;width:50%;padding-top:50%;background:var(--gold-l);opacity:.08;border-radius:50%;}
+    .header-row{display:flex;justify-content:space-between;align-items:center;gap:.8rem;position:relative;z-index:2;}
+    .header-left{min-width:0;}
+    .h-eyebrow{font-size:.6rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.5);display:flex;align-items:center;gap:.4rem;margin-bottom:.2rem;}
+    .h-eyebrow::before{content:'';display:inline-block;width:.8rem;height:1px;background:rgba(255,255,255,.4);}
+    .resto-name{font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em;}
+    .mesa-pill{background:var(--gold);color:var(--ink);font-size:.65rem;font-weight:700;padding:.35rem .8rem;border-radius:2px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;flex-shrink:0;}
+
+    /* CAT NAV */
+    .cat-nav{background:#fff;border-bottom:1px solid var(--border);display:flex;overflow-x:auto;position:sticky;top:68px;z-index:40;scrollbar-width:none;}
+    .cat-nav::-webkit-scrollbar{display:none;}
+    .cat-btn{padding:.75rem 1.1rem;font-size:.8rem;background:none;border:none;cursor:pointer;color:var(--muted);white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;transition:.2s;font-family:'DM Sans',sans-serif;font-weight:500;-webkit-tap-highlight-color:transparent;}
+    .cat-btn.active{color:var(--green);border-bottom-color:var(--green);font-weight:600;}
+    .cat-btn:hover:not(.active){color:var(--ink);}
+
+    /* MENU BODY */
+    .menu-body{padding:1.3rem 1rem 10rem;}
+    .cat-section{margin-bottom:2.5rem;}
+    .cat-heading{
+      font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;
+      margin-bottom:.9rem;padding-bottom:.65rem;border-bottom:1px solid var(--border);
+      letter-spacing:-.01em;color:var(--ink);
+    }
+
+    /* ITEM */
+    .item{background:#fff;border-radius:3px;margin-bottom:.6rem;display:flex;overflow:hidden;border:1px solid var(--border);transition:border-color .15s;-webkit-tap-highlight-color:transparent;}
+    .item:hover{border-color:rgba(200,150,62,.35);}
+    .item:active{transform:scale(.99);}
+    .item.agotado{opacity:.4;pointer-events:none;}
+    .item-emoji{width:78px;background:var(--warm);display:flex;align-items:center;justify-content:center;font-size:1.9rem;flex-shrink:0;}
+    .item-body{padding:.9rem 1rem;flex:1;min-width:0;}
+    .item-name{font-weight:600;font-size:.9rem;margin-bottom:.2rem;line-height:1.3;}
+    .item-desc{color:var(--muted);font-size:.77rem;line-height:1.4;margin-bottom:.45rem;}
+    .item-footer{display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+    .item-price{font-family:'Playfair Display',serif;font-weight:700;color:var(--green);font-size:1rem;}
+    .agotado-tag{background:var(--rust-bg);color:var(--rust);font-size:.6rem;padding:.1rem .38rem;border-radius:2px;font-weight:700;margin-left:.4rem;}
+
+    /* CONTROLS */
+    .ctrl-add{background:var(--green);color:#fff;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0;-webkit-tap-highlight-color:transparent;}
+    .ctrl-add:hover{background:var(--green-l);}
+    .ctrl-add:active{transform:scale(.9);}
+    .ctrl-count{display:flex;align-items:center;gap:.4rem;}
+    .ctrl-count .qty{font-weight:700;min-width:20px;text-align:center;font-size:.9rem;}
+    .ctrl-count button{width:30px;height:30px;border-radius:50%;cursor:pointer;border:none;font-size:.9rem;display:flex;align-items:center;justify-content:center;transition:.12s;-webkit-tap-highlight-color:transparent;}
+    .ctrl-count button:active{transform:scale(.88);}
+    .ctrl-minus{background:var(--warm);color:var(--ink);}
+    .ctrl-plus{background:var(--green);color:#fff;}
+    .ctrl-plus:hover{background:var(--green-l);}
+
+    /* ACTIONS BAR */
+    .actions-bar{position:sticky;bottom:0;z-index:45;background:#fff;border-top:1px solid var(--border);padding:.75rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:.6rem;}
+    .action-btn{padding:.7rem;border-radius:3px;border:1px solid var(--border);background:none;cursor:pointer;font-size:.8rem;font-weight:500;display:flex;align-items:center;justify-content:center;gap:.4rem;font-family:'DM Sans',sans-serif;color:var(--ink);transition:.2s;-webkit-tap-highlight-color:transparent;}
+    .action-btn:hover{background:var(--warm);}
+
+    /* CART FAB */
+    .cart-fab{
+      position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);
+      background:var(--green);color:#fff;border:none;border-radius:3px;
+      padding:.8rem 1.8rem;cursor:pointer;font-size:.875rem;font-weight:600;
+      display:flex;align-items:center;gap:.65rem;
+      box-shadow:0 8px 28px rgba(45,90,61,.35);z-index:60;
+      font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .25s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .cart-fab:hover{background:var(--green-l);}
+    .cart-fab:active{transform:translateX(-50%) scale(.97);}
+    .cart-fab.hidden{opacity:0;pointer-events:none;transform:translateX(-50%) translateY(10px);}
+    .cart-num{background:var(--gold);color:var(--ink);border-radius:2px;min-width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;padding:0 .3rem;}
+
+    /* MODAL */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(15,14,11,.5);z-index:100;display:none;align-items:flex-end;}
+    .modal-backdrop.open{display:flex;}
+    .modal{
+      background:var(--cream);border-radius:6px 6px 0 0;padding:1.5rem;
+      width:100%;max-height:88vh;overflow-y:auto;
+      border-top:3px solid var(--green);
+      animation:mup .28s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes mup{from{transform:translateY(16px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+    .modal-handle{width:36px;height:3px;background:rgba(15,14,11,.12);border-radius:2px;margin:0 auto 1.2rem;}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;}
+    .modal-title{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:700;}
+    .modal-close{background:var(--warm);border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;color:var(--muted);font-size:.85rem;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;}
+    .cart-item{display:flex;justify-content:space-between;align-items:center;padding:.65rem 0;border-bottom:1px solid var(--border);gap:.5rem;}
+    .cart-item-info{flex:1;}
+    .cart-item-name{font-size:.875rem;font-weight:500;}
+    .cart-item-qty{font-size:.75rem;color:var(--muted);margin-top:.1rem;}
+    .cart-item-price{font-family:'Playfair Display',serif;font-weight:700;color:var(--green);font-size:.95rem;white-space:nowrap;}
+    .cart-total-row{display:flex;justify-content:space-between;align-items:center;padding:.9rem 0 1rem;}
+    .cart-total-label{font-weight:600;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+    .cart-total-val{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;}
+    .note-input{width:100%;border:1px solid var(--border);border-radius:3px;padding:.8rem 1rem;font-size:.85rem;margin-bottom:1rem;font-family:'DM Sans',sans-serif;resize:none;background:#fff;color:var(--ink);transition:.2s;}
+    .note-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(200,150,62,.1);}
+    .confirm-btn{background:var(--green);color:#fff;border:none;width:100%;padding:.95rem;border-radius:3px;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:.2s;letter-spacing:.02em;-webkit-tap-highlight-color:transparent;}
+    .confirm-btn:hover{background:var(--green-l);}
+    .confirm-btn:disabled{background:#c0b8b0;cursor:not-allowed;}
+
+    /* TOAST */
+    .toast{position:fixed;bottom:8rem;left:50%;transform:translateX(-50%) translateY(8px);background:var(--ink);color:#fff;padding:.6rem 1.2rem;border-radius:3px;font-size:.8rem;z-index:200;opacity:0;transition:.25s;white-space:nowrap;border-left:3px solid var(--gold);pointer-events:none;font-weight:500;}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+    .loading-msg{text-align:center;padding:4rem 2rem;color:var(--muted);font-size:.9rem;}
+    .error-screen{text-align:center;padding:4rem 2rem;color:var(--muted);}
+    .error-screen strong{display:block;color:var(--rust);font-size:1.1rem;margin-bottom:.5rem;}
+  
+/* ══════════════════════════════════════════════════════
+   APPLE DESIGN — capa de mejoras (fluidez, materiales,
+   tipografía, feedback). No cambia estructura ni lógica,
+   solo refina cómo se mueve y respira la interfaz.
+   ══════════════════════════════════════════════════════ */
+:root{
+  --ease-spring: cubic-bezier(.32,.72,0,1);       /* damping ~1.0, sin rebote */
+  --ease-spring-bounce: cubic-bezier(.34,1.56,.64,1); /* solo para lo que llega con momentum */
+  --ease-out: cubic-bezier(.16,1,.3,1);
+}
+
+@media (prefers-reduced-motion: no-preference){
+  /* Respuesta instantánea: presionar se siente antes de soltar */
+  .btn-primary,.btn-ghost,.btn-gold,.btn-sm,.btn-dl,.cat-pill,.pin-key,
+  .sb-item,.rol-card,.mesa-card,.qr-card,.order-card,.stat-card,
+  .modal-close,.btn-logout,.hamburger{
+    transition:transform .12s var(--ease-spring),background-color .2s var(--ease-out),
+      border-color .2s var(--ease-out),box-shadow .2s var(--ease-out),color .2s var(--ease-out);
+  }
+  .btn-primary:active,.btn-gold:active,.btn-dl:active,.btn-ghost:active,
+  .btn-sm:active,.cat-pill:active,.pin-key:active,.modal-close:active,
+  .btn-logout:active,.hamburger:active{
+    transform:scale(.96);
+    transition-duration:.08s;
+  }
+  .rol-card:active,.mesa-card:active,.qr-card:active{transform:scale(.985);transition-duration:.1s;}
+
+  .sidebar{transition:transform .38s var(--ease-spring);}
+  .modal-overlay{transition:opacity .28s var(--ease-out),backdrop-filter .28s var(--ease-out);}
+  .modal{transition:transform .38s var(--ease-spring-bounce),opacity .28s var(--ease-out);}
+  .toast{transition:transform .42s var(--ease-spring-bounce),opacity .25s var(--ease-out);}
+  .toggle .slider,.toggle .slider::before{transition:background-color .25s var(--ease-out),transform .3s var(--ease-spring);}
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;}
+  .modal-overlay,.modal,.toast{transition:opacity .15s linear!important;transform:none!important;}
+}
+
+/* Materiales translúcidos — cristal, no bloques opacos */
+.mobile-header{
+  background:rgba(45,90,61,.72);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  box-shadow:none;
+}
+.modal-overlay{backdrop-filter:blur(10px) saturate(140%);-webkit-backdrop-filter:blur(10px) saturate(140%);}
+.toast{
+  background:rgba(15,14,11,.86);
+  backdrop-filter:blur(16px) saturate(160%);
+  -webkit-backdrop-filter:blur(16px) saturate(160%);
+  border:1px solid rgba(255,255,255,.08);
+}
+.toast.success{background:rgba(45,90,61,.88);}
+.toast.error{background:rgba(194,74,43,.88);}
+
+/* Tipografía — tracking/leading específico por tamaño, no un valor fijo */
+.page-title{letter-spacing:-.025em;line-height:1.08;}
+.stat-val,.order-mesa,.mesa-num,.qr-label{letter-spacing:-.02em;}
+.modal-title{letter-spacing:-.02em;line-height:1.15;}
+.page-sub,.card-sub,.stat-sub{letter-spacing:.005em;line-height:1.5;}
+.sb-item,.btn-primary,.btn-ghost,.btn-gold{letter-spacing:.002em;}
+
+/* Origen espacial — el modal nace desde donde se le llama, no desde el centro */
+.modal-overlay.open .modal{transform:translateY(0) scale(1);}
+.modal{transform:translateY(12px) scale(.98);}
+
+/* Foco accesible, coherente con el resto del sistema */
+.btn-primary:focus-visible,.btn-ghost:focus-visible,.btn-gold:focus-visible,
+.sb-item:focus-visible,.cat-pill:focus-visible{
+  outline:2px solid var(--gold);outline-offset:2px;
+}
+
+/* Modo app iOS (Add to Home Screen) — respeta notch / isla dinámica */
+@supports (padding-top: env(safe-area-inset-top)){
+  .mobile-header{padding-top:env(safe-area-inset-top);height:calc(56px + env(safe-area-inset-top));}
+  .toast{margin-bottom:env(safe-area-inset-bottom);}
+}
+
+
+/* ══ VERSIÓN FINAL: piezas nuevas de la carta ══ */
+.lang-btn{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:3px;font-size:.65rem;font-weight:700;letter-spacing:.08em;padding:.35rem .55rem;cursor:pointer;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;}
+.header-right{display:flex;align-items:center;gap:.45rem;flex-shrink:0;}
+.alg-list{display:flex;flex-wrap:wrap;gap:.25rem;margin:-.1rem 0 .45rem;}
+.alg-pill{font-size:.62rem;background:var(--warm);color:var(--ink);padding:.12rem .38rem;border-radius:10px;white-space:nowrap;}
+.alg-note{margin:1.5rem .2rem 0;font-size:.72rem;color:var(--muted);line-height:1.5;text-align:center;}
+.track{background:#fff;border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:3px;padding:.85rem 1rem;margin-bottom:1.2rem;}
+.track.listo{border-left-color:var(--green);background:var(--green-bg);}
+.track-title{font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.45rem;}
+.track-row{display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.25rem 0;font-size:.85rem;}
+.track-row + .track-row{border-top:1px solid var(--border);}
+.track-items{color:var(--muted);font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;}
+.track-state{font-weight:700;white-space:nowrap;font-size:.8rem;}
+.track-state.nuevo{color:var(--gold);} .track-state.preparando{color:var(--gold);} .track-state.listo{color:var(--green);}
+.closed-screen{text-align:center;padding:5rem 2rem;color:var(--muted);line-height:1.6;}
+.closed-screen strong{display:block;font-family:'Playfair Display',serif;color:var(--ink);font-size:1.3rem;margin-bottom:.6rem;}
+.action-btn:disabled{opacity:.5;cursor:default;}
+</style>
+</head>
+<body>
+
+<div class="ls" id="ls">
+  <img src="./img/cartea.png" alt="Cartéa" style="height:48px;display:block;">
+  <div class="ls-sub" id="lsSub">Cargando carta...</div>
+</div>
+
+<header>
+  <div class="header-row">
+    <div class="header-left">
+      <div class="h-eyebrow" id="hEyebrow">Carta digital</div>
+      <div class="resto-name" id="restoNombre">…</div>
+    </div>
+    <div class="header-right">
+      <button class="lang-btn" id="langBtn" style="display:none" aria-label="Cambiar idioma">EN</button>
+      <div class="mesa-pill" id="mesaBadge">Mesa —</div>
+    </div>
+  </div>
+</header>
+
+<div class="cat-nav" id="catNav"></div>
+<div class="menu-body" id="menuBody"><div class="loading-msg">…</div></div>
+
+<div class="actions-bar" id="actionsBar">
+  <button class="action-btn" id="btnCamarero">🔔 <span data-t="callWaiter">Llamar camarero</span></button>
+  <button class="action-btn" id="btnCuenta">🧾 <span data-t="askBill">Pedir cuenta</span></button>
+</div>
+
+<button class="cart-fab hidden" id="cartBtn">
+  <span data-t="seeOrder">Ver mi pedido</span> <div class="cart-num" id="cartCount">0</div>
+</button>
+
+<div class="modal-backdrop" id="cartModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" data-t="yourOrder">Tu pedido</div>
+      <button class="modal-close" id="cartCloseBtn" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="cartItems"></div>
+    <div class="cart-total-row">
+      <span class="cart-total-label">Total</span>
+      <span class="cart-total-val" id="cartTotal">0,00 €</span>
+    </div>
+    <textarea class="note-input" id="noteInput" rows="2" maxlength="300"></textarea>
+    <button class="confirm-btn" id="confirmBtn" data-t="confirm">Confirmar pedido →</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { collection, onSnapshot, addDoc, doc, getDoc, query, where, serverTimestamp }
+  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { db, ensureAuth, escapeHtml, eur, isPro, ALERGENOS, CATS_POR_DEFECTO, CAT_EN } from './js/common.js';
+
+/* ── Textos en los dos idiomas ── */
+const T = {
+  es: {
+    loading:'Cargando carta...', eyebrow:'Carta digital', table:'Mesa',
+    callWaiter:'Llamar camarero', askBill:'Pedir cuenta', seeOrder:'Ver mi pedido',
+    yourOrder:'Tu pedido', confirm:'Confirmar pedido →', sending:'Enviando pedido...',
+    notePh:'Notas para cocina (alergias, sin gluten...)', added:'Añadido ✓',
+    sent:'✅ Pedido enviado a cocina', error:'❌ Error. Inténtalo de nuevo.',
+    waiterOk:'🔔 Camarero en camino...', billOk:'🧾 Cuenta solicitada',
+    wait:'Ya hemos avisado. Espera un momento 🙂', soldOut:'Agotado', perUnit:'/ud',
+    empty:'El restaurante aún no ha añadido platos.', badQr:'QR no válido',
+    badQrSub:'Pide al personal un nuevo código QR.', noConn:'No se pudo conectar',
+    noConnSub:'Comprueba tu conexión e inténtalo de nuevo.',
+    closed:'Carta no disponible', closedSub:'Ahora mismo no se pueden hacer pedidos desde aquí. Pregunta al personal.',
+    trackTitle:'Tus pedidos', st_nuevo:'🕐 Recibido', st_preparando:'👨‍🍳 En preparación', st_listo:'✅ ¡Listo! Te lo llevamos',
+    readyToast:'✅ ¡Tu pedido está listo!',
+    algNote:'Alérgenos según la información del restaurante. Si tienes alguna alergia o intolerancia, avisa al personal antes de pedir.',
+    removed:'Algún plato ya no está disponible y se ha quitado del pedido.'
+  },
+  en: {
+    loading:'Loading menu...', eyebrow:'Digital menu', table:'Table',
+    callWaiter:'Call waiter', askBill:'Ask for the bill', seeOrder:'View my order',
+    yourOrder:'Your order', confirm:'Place order →', sending:'Sending order...',
+    notePh:'Notes for the kitchen (allergies, gluten free...)', added:'Added ✓',
+    sent:'✅ Order sent to the kitchen', error:'❌ Error. Please try again.',
+    waiterOk:'🔔 A waiter is on the way...', billOk:'🧾 Bill requested',
+    wait:'We already let them know. One moment please 🙂', soldOut:'Sold out', perUnit:'/each',
+    empty:'This restaurant has not added any dishes yet.', badQr:'Invalid QR code',
+    badQrSub:'Please ask the staff for a new QR code.', noConn:'Could not connect',
+    noConnSub:'Check your connection and try again.',
+    closed:'Menu unavailable', closedSub:'Ordering from here is not available right now. Please ask the staff.',
+    trackTitle:'Your orders', st_nuevo:'🕐 Received', st_preparando:'👨‍🍳 Being prepared', st_listo:'✅ Ready! On its way',
+    readyToast:'✅ Your order is ready!',
+    algNote:'Allergens as declared by the restaurant. If you have any allergy or intolerance, please tell the staff before ordering.',
+    removed:'Some dishes are no longer available and were removed from your order.'
+  }
+};
+const LS_LANG = 'cartea_lang';
+let lang = 'es';
+const t = k => (T[lang] && T[lang][k]) || T.es[k] || k;
+
+function applyStaticTexts() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.getAttribute('data-t')); });
+  document.getElementById('noteInput').placeholder = t('notePh');
+  document.getElementById('hEyebrow').textContent = t('eyebrow');
+  document.getElementById('mesaBadge').textContent = t('table') + ' ' + mesa;
+  const ls = document.getElementById('lsSub'); if (ls) ls.textContent = t('loading');
+  document.getElementById('langBtn').textContent = lang === 'es' ? 'EN' : 'ES';
+}
+
+/* ── Parámetros del QR ── */
+const params = new URLSearchParams(location.search);
+const DEMO = params.has('demo');   // menu.html?demo → carta de ejemplo para enseñar a restaurantes
+const uid  = params.get('uid');
+const mesa = (params.get('mesa') || (DEMO ? '7' : '')).trim();
+
+let loaderHidden = false;
+function hideLoader() {
+  if (loaderHidden) return; loaderHidden = true;
+  const l = document.getElementById('ls');
+  if (l) { l.classList.add('hide'); setTimeout(() => l.remove(), 400); }
+}
+setTimeout(hideLoader, 5000); // por si acaso, nunca dejar el cargando para siempre
+
+function fullScreenMsg(title, sub) {
+  document.getElementById('menuBody').innerHTML =
+    `<div class="closed-screen"><strong>${escapeHtml(title)}</strong>${escapeHtml(sub)}</div>`;
+  document.getElementById('catNav').innerHTML = '';
+  document.getElementById('actionsBar').style.display = 'none';
+  document.getElementById('cartBtn').classList.add('hidden');
+  hideLoader();
+}
+
+applyStaticTexts();
+if (!DEMO && (!uid || !/^[A-Za-z0-9]{10,40}$/.test(uid) || !/^\d{1,4}$/.test(mesa))) {
+  fullScreenMsg(t('badQr'), t('badQrSub'));
+  throw new Error('QR no válido');
+}
+
+/* ── Estado ── */
+let resto = null;
+let menuItems = [];      // todos los platos
+let cart = {};           // id → cantidad
+let myUid = null;
+
+/* Idioma: solo con plan Pro. Se respeta lo que eligió el cliente; si no, el idioma del móvil. */
+function configurarIdioma() {
+  if (isPro(resto)) {
+    let saved = null;
+    try { saved = localStorage.getItem(LS_LANG); } catch (e) {}
+    lang = saved === 'es' || saved === 'en' ? saved : ((navigator.language || 'es').toLowerCase().startsWith('es') ? 'es' : 'en');
+    const lb = document.getElementById('langBtn');
+    lb.style.display = '';
+    lb.addEventListener('click', () => {
+      lang = lang === 'es' ? 'en' : 'es';
+      try { localStorage.setItem(LS_LANG, lang); } catch (e) {}
+      applyStaticTexts(); renderMenu(); renderTracking();
+    });
+  }
+  applyStaticTexts();
+  document.getElementById('restoNombre').textContent = resto.nombre || '';
+  document.title = resto.nombre || 'Carta';
+}
+
+/* ── MODO DEMO: carta de ejemplo, sin conexión. Para enseñar Cartéa a un restaurante. ── */
+const DEMO_RESTO = { nombre: 'La Tasca de Ejemplo', plan: 'pro', cats: ['Para picar', 'Principales', 'Postres', 'Bebidas'] };
+const DEMO_MENU = [
+  { id:'d1', categoria:'Para picar', emoji:'🧆', nombre:'Croquetas caseras de jamón', nombre_en:'Homemade ham croquettes', desc:'6 unidades, cremosas por dentro', desc_en:'6 pieces, creamy inside', precio:8.5, alergenos:['gluten','lacteos','huevos'] },
+  { id:'d2', categoria:'Para picar', emoji:'🥔', nombre:'Patatas bravas', nombre_en:'Patatas bravas', desc:'Con salsa brava y alioli', desc_en:'With spicy brava sauce and aioli', precio:6, alergenos:['huevos'] },
+  { id:'d3', categoria:'Para picar', emoji:'🍤', nombre:'Gambas al ajillo', nombre_en:'Garlic prawns', desc:'En cazuela de barro', desc_en:'Served sizzling in a clay pot', precio:11.5, alergenos:['crustaceos'] },
+  { id:'d4', categoria:'Para picar', emoji:'🧀', nombre:'Tabla de quesos', nombre_en:'Cheese board', desc:'Manchego, cabra y azul', desc_en:'Manchego, goat and blue cheese', precio:13, alergenos:['lacteos'] },
+  { id:'d5', categoria:'Principales', emoji:'🥘', nombre:'Paella de marisco', nombre_en:'Seafood paella', desc:'Mínimo 2 personas (precio por persona)', desc_en:'Minimum 2 people (price per person)', precio:16, alergenos:['crustaceos','moluscos','pescado'] },
+  { id:'d6', categoria:'Principales', emoji:'🥩', nombre:'Secreto ibérico', nombre_en:'Iberian pork "secreto"', desc:'Con patatas y pimientos', desc_en:'With potatoes and peppers', precio:15.5, alergenos:[] },
+  { id:'d7', categoria:'Principales', emoji:'🐟', nombre:'Bacalao a la riojana', nombre_en:'Rioja-style cod', desc:'', desc_en:'', precio:17, alergenos:['pescado'] },
+  { id:'d8', categoria:'Principales', emoji:'🥗', nombre:'Ensalada de temporada', nombre_en:'Seasonal salad', desc:'Vegana', desc_en:'Vegan', precio:9.5, alergenos:['mostaza'], activo:false },
+  { id:'d9', categoria:'Postres', emoji:'🍮', nombre:'Flan de la casa', nombre_en:'House flan', desc:'', desc_en:'', precio:4.5, alergenos:['huevos','lacteos'] },
+  { id:'d10', categoria:'Postres', emoji:'🍰', nombre:'Tarta de queso', nombre_en:'Cheesecake', desc:'Al horno, cremosa', desc_en:'Baked and creamy', precio:5.5, alergenos:['lacteos','huevos','gluten'] },
+  { id:'d11', categoria:'Bebidas', emoji:'🍺', nombre:'Caña', nombre_en:'Small draught beer', desc:'', desc_en:'', precio:2.2, alergenos:['gluten'] },
+  { id:'d12', categoria:'Bebidas', emoji:'🍷', nombre:'Copa de vino tinto', nombre_en:'Glass of red wine', desc:'Rioja crianza', desc_en:'Rioja crianza', precio:3.5, alergenos:['sulfitos'] },
+  { id:'d13', categoria:'Bebidas', emoji:'💧', nombre:'Agua mineral', nombre_en:'Mineral water', desc:'50 cl', desc_en:'50 cl', precio:2, alergenos:[] },
+  { id:'d14', categoria:'Bebidas', emoji:'🥤', nombre:'Refresco', nombre_en:'Soft drink', desc:'Cola, naranja o limón', desc_en:'Cola, orange or lemon', precio:2.5, alergenos:[] },
+].map(i => ({ activo: true, ...i }));
+
+function iniciarDemo() {
+  resto = DEMO_RESTO;
+  menuItems = DEMO_MENU;
+  const banner = document.createElement('div');
+  banner.style.cssText = 'background:var(--gold);color:var(--ink);font-size:.72rem;font-weight:700;text-align:center;padding:.5rem .8rem;line-height:1.4';
+  banner.innerHTML = 'MODO DEMO · Así verán la carta tus clientes. Prueba a pedir: el pedido "llega a cocina" y vuelve listo. <a href="index.html" style="color:var(--ink)">Conoce Cartéa →</a>';
+  document.body.insertBefore(banner, document.body.firstChild);
+  configurarIdioma();
+  renderMenu(); hideLoader();
+}
+function pedidoDemo(items, total) {
+  const p = { id: 'demo' + Date.now(), items, total, estado: 'nuevo', timestamp: { seconds: Math.floor(Date.now() / 1000) } };
+  misPedidos.push(p); renderTracking();
+  setTimeout(() => { p.estado = 'preparando'; renderTracking(); }, 4000);
+  setTimeout(() => {
+    p.estado = 'listo'; renderTracking(); showToast(t('readyToast'));
+    try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {}
+  }, 12000);
+  setTimeout(() => { p.estado = 'completado'; renderTracking(); }, 30000);
+}
+
+/* ── Arranque ── */
+if (DEMO) setTimeout(iniciarDemo, 0);
+else ensureAuth().then(async (user) => {
+  myUid = user.uid;
+  const snap = await getDoc(doc(db, 'restaurantes', uid));
+  if (!snap.exists()) { fullScreenMsg(t('badQr'), t('badQrSub')); return; }
+  resto = snap.data();
+
+  if (resto.activo === false) { fullScreenMsg(t('closed'), t('closedSub')); return; }
+  configurarIdioma();
+
+  onSnapshot(collection(db, 'restaurantes', uid, 'menu'), s => {
+    menuItems = [];
+    s.forEach(d => menuItems.push({ id: d.id, ...d.data() }));
+    // Si un plato desaparece de la carta, se quita del carrito
+    let quitado = false;
+    Object.keys(cart).forEach(id => { if (!menuItems.find(i => i.id === id && i.activo)) { delete cart[id]; quitado = true; } });
+    if (quitado) { syncCart(); showToast(t('removed')); }
+    renderMenu(); hideLoader();
+  }, () => { fullScreenMsg(t('noConn'), t('noConnSub')); });
+
+  // Seguimiento de MIS pedidos en esta mesa (solo los de este móvil)
+  onSnapshot(query(collection(db, 'restaurantes', uid, 'pedidos'), where('cliente', '==', myUid)), s => {
+    const antes = new Map(misPedidos.map(p => [p.id, p.estado]));
+    misPedidos = [];
+    s.forEach(d => misPedidos.push({ id: d.id, ...d.data() }));
+    misPedidos.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+    // Aviso cuando un pedido pasa a "listo"
+    if (misPedidos.some(p => p.estado === 'listo' && antes.has(p.id) && antes.get(p.id) !== 'listo')) {
+      showToast(t('readyToast'));
+      try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {}
+    }
+    renderTracking();
+  }, () => {});
+}).catch(() => fullScreenMsg(t('noConn'), t('noConnSub')));
+
+/* ── Pintar la carta ── */
+function nombreDe(item) { return lang === 'en' && item.nombre_en ? item.nombre_en : item.nombre; }
+function descDe(item)   { return lang === 'en' && item.desc_en ? item.desc_en : (item.desc || ''); }
+function catDe(cat)     { return lang === 'en' ? (CAT_EN[cat] || cat) : cat; }
+
+function ordenCategorias() {
+  // Primero el orden que puso el restaurante; después cualquier otra categoría que tenga platos.
+  const base = Array.isArray(resto?.cats) && resto.cats.length ? resto.cats : CATS_POR_DEFECTO;
+  const conPlatos = new Set(menuItems.map(i => i.categoria || 'Otros'));
+  const orden = base.filter(c => conPlatos.has(c));
+  [...conPlatos].sort((a, b) => a.localeCompare(b, 'es')).forEach(c => { if (!orden.includes(c)) orden.push(c); });
+  return orden;
+}
+
+function alergenosHtml(item) {
+  const lista = Array.isArray(item.alergenos) ? item.alergenos : [];
+  if (!lista.length) return '';
+  return '<div class="alg-list">' + ALERGENOS.filter(a => lista.includes(a.id))
+    .map(a => `<span class="alg-pill">${a.icon} ${escapeHtml(lang === 'en' ? a.en : a.es)}</span>`).join('') + '</div>';
+}
+
+let catIds = {};
+function renderMenu() {
+  if (!resto) return;
+  const cats = ordenCategorias();
+  const body = document.getElementById('menuBody');
+  if (!cats.length) {
+    document.getElementById('catNav').innerHTML = '';
+    body.innerHTML = `<div class="loading-msg">${escapeHtml(t('empty'))}</div>`;
+    renderTracking();
+    return;
+  }
+  catIds = {};
+  cats.forEach((c, i) => { catIds[c] = 'sec-' + i; });
+  document.getElementById('catNav').innerHTML = cats.map((c, i) =>
+    `<button class="cat-btn${i === 0 ? ' active' : ''}" data-sec="${catIds[c]}">${escapeHtml(catDe(c))}</button>`).join('');
+
+  const hayAlergenos = menuItems.some(i => Array.isArray(i.alergenos) && i.alergenos.length);
+  body.innerHTML = '<div id="trackBox"></div>' + cats.map(cat => {
+    const items = menuItems.filter(i => (i.categoria || 'Otros') === cat)
+      .sort((a, b) => (b.activo ? 1 : 0) - (a.activo ? 1 : 0) || String(a.nombre).localeCompare(String(b.nombre), 'es'));
+    return `<div class="cat-section" id="${catIds[cat]}">
+      <div class="cat-heading">${escapeHtml(catDe(cat))}</div>
+      ${items.map(item => `
+        <div class="item${!item.activo ? ' agotado' : ''}">
+          <div class="item-emoji">${escapeHtml(item.emoji || '🍽️')}</div>
+          <div class="item-body">
+            <div class="item-name">${escapeHtml(nombreDe(item))}${!item.activo ? `<span class="agotado-tag">${escapeHtml(t('soldOut'))}</span>` : ''}</div>
+            ${descDe(item) ? `<div class="item-desc">${escapeHtml(descDe(item))}</div>` : ''}
+            ${alergenosHtml(item)}
+            <div class="item-footer">
+              <div class="item-price">${eur(item.precio)}</div>
+              <div class="ctrl" data-ctrl="${escapeHtml(item.id)}"></div>
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }).join('') + (hayAlergenos ? `<p class="alg-note">${escapeHtml(t('algNote'))}</p>` : '');
+
+  menuItems.forEach(i => { if (i.activo) updateCtrl(i.id); });
+  renderTracking();
+}
+
+/* ── Seguimiento del pedido ── */
+let misPedidos = [];
+function renderTracking() {
+  const box = document.getElementById('trackBox');
+  if (!box) return;
+  const hace6h = Date.now() / 1000 - 6 * 3600;
+  const activos = misPedidos.filter(p => ['nuevo', 'preparando', 'listo'].includes(p.estado)
+    && (!p.timestamp || p.timestamp.seconds > hace6h));
+  if (!activos.length) { box.innerHTML = ''; return; }
+  const todoListo = activos.every(p => p.estado === 'listo');
+  box.innerHTML = `<div class="track${todoListo ? ' listo' : ''}">
+    <div class="track-title">${escapeHtml(t('trackTitle'))}</div>
+    ${activos.map(p => `<div class="track-row">
+      <span class="track-items">${escapeHtml((p.items || []).map(i => i.qty + '× ' + i.nombre).join(', '))}</span>
+      <span class="track-state ${p.estado}">${escapeHtml(t('st_' + p.estado))}</span>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* ── Botones +/− ── */
+function updateCtrl(id) {
+  const el = document.querySelector(`[data-ctrl="${CSS.escape(id)}"]`);
+  if (!el) return;
+  const qty = cart[id] || 0;
+  el.innerHTML = qty === 0
+    ? `<button class="ctrl-add" data-add="${escapeHtml(id)}" aria-label="+">+</button>`
+    : `<div class="ctrl-count"><button class="ctrl-minus" data-rem="${escapeHtml(id)}" aria-label="−">−</button><span class="qty">${qty}</span><button class="ctrl-plus" data-add="${escapeHtml(id)}" aria-label="+">+</button></div>`;
+}
+
+document.getElementById('catNav').addEventListener('click', e => {
+  const btn = e.target.closest('.cat-btn'); if (!btn) return;
+  document.getElementById(btn.dataset.sec)?.scrollIntoView({ behavior: 'smooth' });
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+});
+document.getElementById('menuBody').addEventListener('click', e => {
+  const add = e.target.closest('[data-add]');
+  const rem = e.target.closest('[data-rem]');
+  if (add) {
+    const id = add.dataset.add;
+    if ((cart[id] || 0) >= 30) return;
+    cart[id] = (cart[id] || 0) + 1; updateCtrl(id); syncCart(); showToast(t('added'));
+  } else if (rem) {
+    const id = rem.dataset.rem;
+    cart[id] = (cart[id] || 0) - 1; if (cart[id] <= 0) delete cart[id]; updateCtrl(id); syncCart();
+  }
+});
+
+function syncCart() {
+  const n = Object.values(cart).reduce((a, b) => a + b, 0);
+  document.getElementById('cartCount').textContent = n;
+  document.getElementById('cartBtn').classList.toggle('hidden', n === 0);
+}
+
+function lineasCarrito() {
+  return Object.entries(cart).map(([id, qty]) => {
+    const item = menuItems.find(i => i.id === id);
+    return item ? { item, qty } : null;
+  }).filter(Boolean);
+}
+
+function openCart() {
+  const lineas = lineasCarrito();
+  let sum = 0;
+  document.getElementById('cartItems').innerHTML = lineas.map(({ item, qty }) => {
+    const sub = (Number(item.precio) || 0) * qty; sum += sub;
+    return `<div class="cart-item"><div class="cart-item-info">
+      <div class="cart-item-name">${escapeHtml(item.emoji || '')} ${escapeHtml(nombreDe(item))}</div>
+      <div class="cart-item-qty">× ${qty} · ${eur(item.precio)}${escapeHtml(t('perUnit'))}</div>
+    </div><span class="cart-item-price">${eur(sub)}</span></div>`;
+  }).join('');
+  document.getElementById('cartTotal').textContent = eur(sum);
+  document.getElementById('cartModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeCart() {
+  document.getElementById('cartModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('cartBtn').addEventListener('click', openCart);
+document.getElementById('cartCloseBtn').addEventListener('click', closeCart);
+document.getElementById('cartModal').addEventListener('click', e => { if (e.target.id === 'cartModal') closeCart(); });
+
+document.getElementById('confirmBtn').addEventListener('click', async () => {
+  const lineas = lineasCarrito();
+  if (!lineas.length) { closeCart(); return; }
+  const btn = document.getElementById('confirmBtn');
+  btn.disabled = true; btn.textContent = t('sending');
+  // En el pedido se guarda el nombre en español: es lo que lee la cocina.
+  const items = lineas.map(({ item, qty }) => ({
+    id: item.id, nombre: item.nombre, qty, precio: Number(item.precio) || 0, categoria: item.categoria || ''
+  }));
+  const total = Math.round(items.reduce((a, i) => a + i.precio * i.qty, 0) * 100) / 100;
+  try {
+    if (DEMO) pedidoDemo(items, total);
+    else await addDoc(collection(db, 'restaurantes', uid, 'pedidos'), {
+      mesa, items, total, nota: document.getElementById('noteInput').value.trim().slice(0, 300),
+      estado: 'nuevo', timestamp: serverTimestamp(), cliente: myUid, idioma: lang
+    });
+    closeCart();
+    const ids = Object.keys(cart); cart = {}; syncCart(); ids.forEach(updateCtrl);
+    document.getElementById('noteInput').value = '';
+    showToast(t('sent'));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (e) {
+    console.error(e);
+    showToast(t('error'));
+  }
+  btn.disabled = false; btn.textContent = t('confirm');
+});
+
+/* ── Avisos (con freno: 1 cada 60 s por tipo, para evitar spam) ── */
+const ultimoAviso = {};
+async function enviarAviso(tipo, okMsg) {
+  const ahora = Date.now();
+  if (ultimoAviso[tipo] && ahora - ultimoAviso[tipo] < 60000) { showToast(t('wait')); return; }
+  if (DEMO) { ultimoAviso[tipo] = ahora; showToast(okMsg); return; }
+  if (!myUid) return;
+  ultimoAviso[tipo] = ahora;
+  try {
+    await addDoc(collection(db, 'restaurantes', uid, 'avisos'), { mesa, tipo, timestamp: serverTimestamp(), cliente: myUid });
+    showToast(okMsg);
+  } catch (e) {
+    ultimoAviso[tipo] = 0;
+    showToast(t('error'));
+  }
+}
+document.getElementById('btnCamarero').addEventListener('click', () => enviarAviso('camarero', t('waiterOk')));
+document.getElementById('btnCuenta').addEventListener('click', () => enviarAviso('cuenta', t('billOk')));
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(showToast._t); showToast._t = setTimeout(() => el.classList.remove('show'), 2600);
+}
+window.addEventListener('popstate', closeCart);
+</script>
+</body>
+</html>

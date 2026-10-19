@@ -1,0 +1,19 @@
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Herramientas
+node_modules/
+.netlify/
+.firebase/
+*.log
+
+# Copias y paquetes
+*.zip
+*.bak
+
+# Secretos (nunca subirlos)
+.env
+.env.*
+serviceAccount*.json

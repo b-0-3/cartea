@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" href="./img/carteafondo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Cartéa – Mesas</title>
+  <!-- Modo app al añadir a pantalla de inicio (iOS) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cartéa">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2d5a3d">
+  <link rel="apple-touch-icon" href="./img/carteafondo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="app-loading" id="appLoading">
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:52px;display:block;">
+  <div class="al-dots"><span class="al-dot"></span><span class="al-dot"></span><span class="al-dot"></span></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+  <button class="hamburger" id="hamburgerBtn">☰</button>
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:34px;display:block;">
+  <span class="sb-badge" id="mobileBadge" style="display:none;margin-left:auto">0</span>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-inner">
+    <div class="sb-header">
+      <img src="./img/carteablanco.png" alt="Cartéa" style="height:48px;display:block;margin-bottom:.3rem;">
+      <div class="sb-name" id="sidebarNombre">Cargando…</div>
+    </div>
+    <div class="sb-divider"></div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar" id="sbAvatar">–</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sbPersona">–</div>
+          <div class="sb-user-role">Administrador</div>
+        </div>
+      </div>
+      <button class="btn-logout" id="logoutBtn">⎋ &nbsp;Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="page active">
+
+    <div class="page-hd">
+      <div class="page-eyebrow">Sala</div>
+      <div class="page-title">Gestión de mesas</div>
+      <div class="page-sub">Configura el número de mesas y visualiza su estado en tiempo real</div>
+    </div>
+    <div class="grid-side">
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Configurar mesas</div><span class="plan-pill" id="planPill">–</span></div>
+        <div class="card-body">
+          <div class="field">
+            <label>Número total de mesas</label>
+            <input type="number" id="mesasInput" min="1" max="200" placeholder="Ej: 12" inputmode="numeric"/>
+            <div class="form-hint" id="mesasHint">Se generará un QR único para cada una.</div>
+          </div>
+          <button class="btn-primary" id="saveMesasBtn" style="width:100%;justify-content:center;">Guardar cambios →</button>
+          <div id="proHint"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <div><div class="card-title">Estado de mesas</div><div class="card-sub" id="mesasEstadoSub">–</div></div>
+          <div style="display:flex;gap:.8rem;font-size:.72rem;color:var(--muted);align-items:center;flex-wrap:wrap;">
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#d5cec6;margin-right:.3rem;"></span>Libre</span>
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#27ae60;margin-right:.3rem;"></span>Con pedido</span>
+            <span>🧹 Por limpiar</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="mesas-grid" id="mesasGrid"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+
+import { initPanel, db } from './js/panel-core.js';
+import { collection, onSnapshot, doc, updateDoc, query, where }
+  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { isPro, mesasEfectivas, mailtoPro, LIMITE_MESAS_BASICO, LIMITE_MESAS_PRO, ESTADOS_ACTIVOS } from './js/common.js';
+
+let uid = null;
+let restoData = null;
+let ocupadas = new Set();
+let limpias = {};
+
+function render() {
+  const n = mesasEfectivas(restoData);
+  const pro = isPro(restoData);
+  document.getElementById('mesasEstadoSub').textContent = n + ' mesas';
+  const grid = document.getElementById('mesasGrid');
+  let html = '';
+  for (let i = 1; i <= n; i++) {
+    const oc = ocupadas.has(String(i));
+    const sucia = limpias[String(i)] === false;
+    html += `<div class="mesa-card"><div class="mesa-num">${i}</div><div class="mesa-label">Mesa</div>
+      <div class="mesa-status ${oc ? 'activa' : ''}"></div>
+      <div class="mesa-clean ${sucia ? 'sucia' : ''}">${sucia ? '🧹 Por limpiar' : '&nbsp;'}</div></div>`;
+  }
+  grid.innerHTML = html;
+
+  const pill = document.getElementById('planPill');
+  pill.textContent = pro ? 'Plan Pro' : 'Plan Básico';
+  pill.classList.toggle('pro', pro);
+  const input = document.getElementById('mesasInput');
+  input.max = pro ? LIMITE_MESAS_PRO : LIMITE_MESAS_BASICO;
+  document.getElementById('mesasHint').textContent = pro
+    ? `Hasta ${LIMITE_MESAS_PRO} mesas. Se generará un QR único para cada una.`
+    : `En el plan Básico puedes tener hasta ${LIMITE_MESAS_BASICO} mesas.`;
+  document.getElementById('proHint').innerHTML = pro ? '' :
+    `<div class="pro-hint">¿Tienes más de ${LIMITE_MESAS_BASICO} mesas? Con <b>Pro</b> puedes tener hasta 200. <a href="${mailtoPro(restoData)}">Pasar a Pro →</a></div>`;
+}
+
+initPanel().then(({ uid: u, restoData: rd }) => {
+  uid = u; restoData = rd;
+  document.getElementById('mesasInput').value = mesasEfectivas(restoData);
+  render();
+
+  onSnapshot(query(collection(db, 'restaurantes', uid, 'pedidos'), where('estado','in',ESTADOS_ACTIVOS)), snap => {
+    ocupadas = new Set(snap.docs.map(d => String(d.data().mesa)));
+    render();
+  });
+  onSnapshot(collection(db, 'restaurantes', uid, 'mesasEstado'), snap => {
+    limpias = {};
+    snap.forEach(d => { limpias[d.id] = d.data().limpia !== false; });
+    render();
+  }, () => {});
+
+  document.getElementById('saveMesasBtn').addEventListener('click', async () => {
+    const max = isPro(restoData) ? LIMITE_MESAS_PRO : LIMITE_MESAS_BASICO;
+    const n = parseInt(document.getElementById('mesasInput').value, 10);
+    if (!n || n < 1) { showToast('Introduce un número de mesas', 'error'); return; }
+    if (n > max) {
+      showToast(isPro(restoData) ? `Máximo ${max} mesas` : `En el plan Básico el máximo son ${max} mesas`, 'error');
+      document.getElementById('mesasInput').value = max;
+      return;
+    }
+    try {
+      await updateDoc(doc(db,'restaurantes',uid), { mesas: n, mesasConfiguradas: true });
+      restoData.mesas = n;
+      render();
+      showToast('Mesas actualizadas ✓', 'success');
+    } catch (e) {
+      showToast('No se pudo guardar', 'error');
+    }
+  });
+});
+
+</script>
+</body>
+</html>

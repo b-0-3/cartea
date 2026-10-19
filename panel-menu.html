@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" href="./img/carteafondo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Cartéa – Mi menú</title>
+  <!-- Modo app al añadir a pantalla de inicio (iOS) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cartéa">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2d5a3d">
+  <link rel="apple-touch-icon" href="./img/carteafondo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="app-loading" id="appLoading">
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:52px;display:block;">
+  <div class="al-dots"><span class="al-dot"></span><span class="al-dot"></span><span class="al-dot"></span></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+  <button class="hamburger" id="hamburgerBtn">☰</button>
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:34px;display:block;">
+  <span class="sb-badge" id="mobileBadge" style="display:none;margin-left:auto">0</span>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-inner">
+    <div class="sb-header">
+      <img src="./img/carteablanco.png" alt="Cartéa" style="height:48px;display:block;margin-bottom:.3rem;">
+      <div class="sb-name" id="sidebarNombre">Cargando…</div>
+    </div>
+    <div class="sb-divider"></div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar" id="sbAvatar">–</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sbPersona">–</div>
+          <div class="sb-user-role">Administrador</div>
+        </div>
+      </div>
+      <button class="btn-logout" id="logoutBtn">⎋ &nbsp;Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="page active">
+
+    <div class="page-hd" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <div class="page-eyebrow">Carta digital</div>
+        <div class="page-title">Mi menú</div>
+        <div class="page-sub">Los cambios se publican al instante para todos los clientes</div>
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button class="btn-ghost" id="importBtn">📥 Pegar carta entera</button>
+        <button class="btn-primary" id="addPlatoBtn">＋ Añadir plato</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title">Platos del menú</div>
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+          <input type="text" id="menuSearch" placeholder="Buscar plato…" style="border:1px solid var(--border);background:#fff;padding:.4rem .8rem;border-radius:3px;font-size:.8rem;font-family:'DM Sans',sans-serif;width:180px;"/>
+          <select id="menuSortSelect" style="border:1px solid var(--border);background:#fff;padding:.4rem .8rem;border-radius:3px;font-size:.8rem;font-family:'DM Sans',sans-serif;">
+            <option value="nombre">A–Z</option>
+            <option value="precio-asc">Precio ↑</option>
+            <option value="precio-desc">Precio ↓</option>
+            <option value="categoria">Categoría</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-body" style="padding:.6rem 0 0">
+        <div class="menu-cats" style="padding:0 1.2rem;" id="menuCatFilter"></div>
+        <div class="card-body p0" style="overflow-x:auto"><table class="menu-table"><thead><tr><th style="width:44px"></th><th>Plato</th><th>Categoría</th><th>Precio</th><th style="width:60px;text-align:center;">Disponible</th><th style="width:80px"></th></tr></thead><tbody id="menuTbody"></tbody></table></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL AÑADIR/EDITAR PLATO -->
+<div class="modal-overlay" id="platoModal">
+  <div class="modal">
+    <button class="modal-close" id="platoModalClose">×</button>
+    <div class="modal-title" id="platoModalTitle">Añadir plato</div>
+    <div class="form-row">
+      <div class="field"><label>Nombre *</label><input type="text" id="mNombre" placeholder="Pizza Margherita"/></div>
+      <div class="field"><label>Precio € *</label><input type="number" id="mPrecio" step="0.01" placeholder="12.50" inputmode="decimal"/></div>
+    </div>
+    <div class="field"><label>Descripción</label><textarea id="mDesc" placeholder="Ingredientes, elaboración…" rows="2"></textarea></div>
+    <div class="form-row">
+      <div class="field">
+        <label>Emoji / Icono</label>
+        <button type="button" class="emoji-trigger" id="mEmojiBtn"><span id="mEmojiPreview">🍽️</span></button>
+        <input type="hidden" id="mEmoji" value="🍽️"/>
+      </div>
+      <div class="field"><label>Categoría</label><select id="mCat"></select></div>
+    </div>
+    <div class="emoji-panel" id="emojiPanel" style="display:none;">
+      <div class="emoji-grid" id="emojiGrid"></div>
+    </div>
+    <div class="field">
+      <label>Alérgenos que contiene</label>
+      <div class="alg-grid" id="algGrid"></div>
+      <div class="form-hint">Por ley tienes que informar de estos 14 alérgenos. Se muestran al cliente junto al plato.</div>
+    </div>
+    <div class="en-box" id="enBox">
+      <div class="en-box-title">🇬🇧 En inglés <span id="enLockTag"></span></div>
+      <div class="field"><label>Nombre en inglés</label><input type="text" id="mNombreEn" placeholder="Margherita pizza"/></div>
+      <div class="field"><label>Descripción en inglés</label><textarea id="mDescEn" rows="2" placeholder="Tomato, mozzarella, basil…"></textarea></div>
+    </div>
+    <div class="field" style="display:flex;align-items:center;justify-content:space-between;">
+      <label style="margin:0;">Disponible ahora</label>
+      <label class="toggle"><input type="checkbox" id="mActivo" checked/><span class="slider"></span></label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" id="platoModalCancel">Cancelar</button>
+      <button class="btn-primary" id="platoModalSave">Guardar plato →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPORTAR CARTA -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" id="importClose">×</button>
+    <div class="modal-title">Pegar carta entera</div>
+    <div style="font-size:.8rem;color:var(--muted);line-height:1.6;margin-bottom:.8rem;">
+      Escribe o pega la carta: <b>un plato por línea</b> con su precio al final. Para cambiar de categoría, pon una línea que empiece por <b>#</b>. Lo que vaya después de una <b>|</b> es la descripción.
+    </div>
+    <div class="field">
+      <textarea id="importText" rows="11" style="font-family:monospace;font-size:.8rem;" placeholder="# Entrantes&#10;Croquetas caseras 8,50&#10;Patatas bravas ..... 6 €&#10;Gambas al ajillo 11,50 | En cazuela de barro&#10;&#10;# Bebidas&#10;Caña 2,20&#10;Copa de vino 3,50"></textarea>
+    </div>
+    <div id="importPreview" class="form-hint" style="margin-top:-.4rem;min-height:1.2em;"></div>
+    <div class="form-hint">Después repasa los <b>alérgenos</b> de cada plato (botón ✏️).</div>
+    <div class="modal-footer">
+      <button class="btn-ghost" id="importCancel">Cancelar</button>
+      <button class="btn-primary" id="importSave" disabled>Crear platos →</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+
+import { initPanel, db } from './js/panel-core.js';
+import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, writeBatch }
+  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { escapeHtml, eur, isPro, mailtoPro, ALERGENOS, CATS_POR_DEFECTO } from './js/common.js';
+
+let uid = null;
+let resto = null;
+let CATS = [...CATS_POR_DEFECTO];
+let allMenu = [];
+let menuCatFilter = 'Todos';
+let menuSearchTerm = '';
+let menuSort = 'nombre';
+let editingPlatoId = null;
+
+const EMOJI_OPTIONS = [
+  '🍕','🍔','🌭','🥪','🌮','🌯','🥙','🥗','🍝','🍜','🍲','🍛','🍚','🍙','🍱',
+  '🥘','🫕','🥩','🍗','🍖','🥓','🍤','🍣','🍥','🦐','🦀','🦞','🐟','🥚','🧆',
+  '🥟','🥠','🍞','🥖','🥐','🧀','🥞','🧇','🥯','🍟','🌶️','🥑','🍅','🥬','🥦',
+  '🥕','🌽','🍆','🥔','🍄','🫒',
+  '🍰','🎂','🧁','🍮','🍨','🍦','🍩','🍪','🥧','🍫','🍬','🍭','🍯',
+  '🍎','🍊','🍋','🍇','🍓','🍒','🍑','🍍','🥝','🍉','🍌','🥥','🥭',
+  '☕','🍵','🧃','🥤','🧋','🍺','🍷','🍸','🍹','🥂','🍾','🥃','💧'
+];
+
+function renderEmojiGrid() {
+  const current = document.getElementById('mEmoji').value;
+  document.getElementById('emojiGrid').innerHTML = EMOJI_OPTIONS.map(e =>
+    `<button type="button" class="emoji-option${e===current?' selected':''}" data-emoji="${e}">${e}</button>`
+  ).join('');
+}
+function setEmoji(e) {
+  document.getElementById('mEmoji').value = e;
+  document.getElementById('mEmojiPreview').textContent = e;
+  document.querySelectorAll('.emoji-option').forEach(b => b.classList.toggle('selected', b.getAttribute('data-emoji')===e));
+}
+function toggleEmojiPanel(force) {
+  const panel = document.getElementById('emojiPanel');
+  const open = force !== undefined ? force : panel.style.display === 'none';
+  if (open) renderEmojiGrid();
+  panel.style.display = open ? 'block' : 'none';
+}
+
+/* ── Alérgenos ── */
+function renderAlgGrid(seleccion) {
+  const sel = new Set(seleccion || []);
+  document.getElementById('algGrid').innerHTML = ALERGENOS.map(a => `
+    <label class="alg-opt${sel.has(a.id)?' on':''}"><input type="checkbox" value="${a.id}" ${sel.has(a.id)?'checked':''}/> ${a.icon} ${a.es}</label>`).join('');
+}
+document.getElementById('algGrid').addEventListener('change', e => {
+  const lbl = e.target.closest('.alg-opt'); if (lbl) lbl.classList.toggle('on', e.target.checked);
+});
+function algSeleccionados() {
+  return [...document.querySelectorAll('#algGrid input:checked')].map(i => i.value);
+}
+function algIconos(lista) {
+  if (!Array.isArray(lista) || !lista.length) return '';
+  return ALERGENOS.filter(a => lista.includes(a.id)).map(a => `<span title="${a.es}">${a.icon}</span>`).join('');
+}
+
+/* ── Tabla ── */
+function renderMenuCatFilter() {
+  const cats = ['Todos', ...new Set(allMenu.map(i=>i.categoria).filter(Boolean))];
+  document.getElementById('menuCatFilter').innerHTML = cats.map(c =>
+    `<button class="cat-pill${menuCatFilter===c?' active':''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`
+  ).join('');
+}
+
+function renderMenuTable() {
+  let items = [...allMenu];
+  if (menuCatFilter !== 'Todos') items = items.filter(i => i.categoria === menuCatFilter);
+  if (menuSearchTerm) items = items.filter(i => String(i.nombre||'').toLowerCase().includes(menuSearchTerm.toLowerCase()));
+  if (menuSort === 'nombre') items.sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre),'es'));
+  else if (menuSort === 'precio-asc') items.sort((a,b)=>(a.precio||0)-(b.precio||0));
+  else if (menuSort === 'precio-desc') items.sort((a,b)=>(b.precio||0)-(a.precio||0));
+  else if (menuSort === 'categoria') items.sort((a,b)=>String(a.categoria||'').localeCompare(String(b.categoria||''),'es'));
+
+  const tbody = document.getElementById('menuTbody');
+  if (!items.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty" style="padding:2rem"><div class="empty-icon">📋</div><strong>Sin platos${menuCatFilter!=='Todos'?' en esta categoría':''}</strong><span>Añade el primero con el botón de arriba</span></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = items.map(item => `
+    <tr>
+      <td><div class="menu-emoji-big">${escapeHtml(item.emoji||'🍽️')}</div></td>
+      <td>
+        <div class="menu-name-cell">${escapeHtml(item.nombre)}${item.nombre_en?` <span style="font-weight:400;color:var(--muted);font-size:.72rem">· ${escapeHtml(item.nombre_en)}</span>`:''}</div>
+        <div class="menu-desc-cell">${escapeHtml(item.desc||'')}</div>
+        ${algIconos(item.alergenos) ? `<div class="alg-mini">${algIconos(item.alergenos)}</div>` : ''}
+      </td>
+      <td><span class="menu-cat-pill">${escapeHtml(item.categoria||'–')}</span></td>
+      <td class="menu-price-cell">${eur(item.precio)}</td>
+      <td style="text-align:center;">
+        <label class="toggle"><input type="checkbox" ${item.activo?'checked':''} data-toggle="${escapeHtml(item.id)}"/><span class="slider"></span></label>
+      </td>
+      <td>
+        <div style="display:flex;gap:.35rem;">
+          <button class="btn-sm btn-gold-sm" data-edit="${escapeHtml(item.id)}" title="Editar">✏️</button>
+          <button class="btn-sm btn-danger-sm" data-del="${escapeHtml(item.id)}" title="Eliminar">🗑</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function renderModalCatSelect() {
+  const usadas = allMenu.map(i => i.categoria).filter(Boolean);
+  const todas = [...CATS, ...usadas.filter(c => !CATS.includes(c))];
+  document.getElementById('mCat').innerHTML = [...new Set(todas)].map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+}
+
+function renderMenu() {
+  renderMenuCatFilter();
+  renderMenuTable();
+}
+
+function openPlatoModal(plato) {
+  editingPlatoId = plato ? plato.id : null;
+  document.getElementById('platoModalTitle').textContent = plato ? 'Editar plato' : 'Añadir plato';
+  document.getElementById('mNombre').value  = plato?.nombre  || '';
+  document.getElementById('mPrecio').value  = plato && plato.precio != null ? plato.precio : '';
+  document.getElementById('mDesc').value    = plato?.desc    || '';
+  document.getElementById('mNombreEn').value = plato?.nombre_en || '';
+  document.getElementById('mDescEn').value   = plato?.desc_en   || '';
+  setEmoji(plato?.emoji || '🍽️');
+  toggleEmojiPanel(false);
+  renderAlgGrid(plato?.alergenos);
+  document.getElementById('mActivo').checked = plato ? !!plato.activo : true;
+  renderModalCatSelect();
+  if (plato?.categoria) document.getElementById('mCat').value = plato.categoria;
+  document.getElementById('platoModal').classList.add('open');
+}
+function closePlatoModal() {
+  document.getElementById('platoModal').classList.remove('open');
+  toggleEmojiPanel(false);
+  editingPlatoId = null;
+}
+
+function configurarIngles() {
+  const pro = isPro(resto);
+  const box = document.getElementById('enBox');
+  box.classList.toggle('locked', !pro);
+  document.getElementById('mNombreEn').disabled = !pro;
+  document.getElementById('mDescEn').disabled = !pro;
+  document.getElementById('enLockTag').innerHTML = pro ? '' :
+    `· <a href="${mailtoPro(resto)}" style="color:var(--green)">disponible en Pro</a>`;
+}
+
+/* ── Pegar carta entera ──
+   "Croquetas 8,50" · "Bravas ....... 6 €" · "Gambas 11,50 | descripción" · "# Categoría" */
+const EMOJI_CAT = [
+  [/bebida|refresco|agua|zumo/i, '🥤'], [/vino/i, '🍷'], [/cerveza/i, '🍺'], [/c[oó]ctel|copa/i, '🍸'], [/caf[eé]|infusi/i, '☕'],
+  [/postre|dulce/i, '🍰'], [/ensalada/i, '🥗'], [/pizza/i, '🍕'], [/pasta/i, '🍝'], [/arroz|paella/i, '🥘'],
+  [/carne/i, '🥩'], [/pescado|marisco/i, '🐟'], [/hamburguesa/i, '🍔'], [/bocadillo|sandwich/i, '🥪'], [/tapa|picar|entrante|raci/i, '🍤'],
+];
+const emojiPara = (texto) => (EMOJI_CAT.find(([re]) => re.test(texto)) || [null, '🍽️'])[1];
+
+function parsearCarta(texto) {
+  let cat = (CATS[0] || 'Principales');
+  const platos = [], fallos = [], catsNuevas = [];
+  texto.split(/\r?\n/).forEach(linea => {
+    const l = linea.trim();
+    if (!l) return;
+    if (l.startsWith('#') || (/:$/.test(l) && !/\d/.test(l))) {
+      cat = l.replace(/^#+/, '').replace(/:$/, '').trim() || cat;
+      if (!CATS.includes(cat) && !catsNuevas.includes(cat)) catsNuevas.push(cat);
+      return;
+    }
+    let [principal, ...resto] = l.split('|');
+    const desc = resto.join('|').trim();
+    const m = principal.trim().match(/^(.+?)[\s.…·:;\-–—]*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|eur|euros)?$/i);
+    if (!m) { fallos.push(l); return; }
+    const nombre = m[1].trim().replace(/[\s.…·:;\-–—]+$/, '');
+    const precio = Math.round(parseFloat(m[2].replace(',', '.')) * 100) / 100;
+    if (!nombre || isNaN(precio)) { fallos.push(l); return; }
+    platos.push({ nombre: nombre.slice(0, 80), precio, desc: desc.slice(0, 200), categoria: cat, emoji: emojiPara(cat + ' ' + nombre), activo: true, alergenos: [] });
+  });
+  return { platos, fallos, catsNuevas };
+}
+
+function previewImport() {
+  const { platos, fallos, catsNuevas } = parsearCarta(document.getElementById('importText').value);
+  const cats = new Set(platos.map(p => p.categoria));
+  let txt = platos.length ? `✓ ${platos.length} plato${platos.length>1?'s':''} en ${cats.size} categoría${cats.size>1?'s':''}` : '';
+  if (catsNuevas.length) txt += ` · categorías nuevas: ${catsNuevas.join(', ')}`;
+  if (fallos.length) txt += ` · ⚠️ ${fallos.length} línea${fallos.length>1?'s':''} sin precio (no se crearán): "${fallos.slice(0,2).join('", "')}"${fallos.length>2?'…':''}`;
+  document.getElementById('importPreview').textContent = txt;
+  document.getElementById('importSave').disabled = !platos.length;
+}
+
+initPanel().then(({ uid: u, restoData }) => {
+  uid = u; resto = restoData;
+
+  const abrirImport = () => { document.getElementById('importModal').classList.add('open'); previewImport(); };
+  const cerrarImport = () => document.getElementById('importModal').classList.remove('open');
+  document.getElementById('importBtn').addEventListener('click', abrirImport);
+  document.getElementById('importClose').addEventListener('click', cerrarImport);
+  document.getElementById('importCancel').addEventListener('click', cerrarImport);
+  document.getElementById('importModal').addEventListener('click', function(e){ if (e.target === this) cerrarImport(); });
+  document.getElementById('importText').addEventListener('input', previewImport);
+  document.getElementById('importSave').addEventListener('click', async () => {
+    const { platos, catsNuevas } = parsearCarta(document.getElementById('importText').value);
+    if (!platos.length) return;
+    const btn = document.getElementById('importSave');
+    btn.disabled = true; btn.textContent = 'Creando…';
+    try {
+      for (let k = 0; k < platos.length; k += 400) {
+        const batch = writeBatch(db);
+        platos.slice(k, k + 400).forEach(p => batch.set(doc(collection(db, 'restaurantes', uid, 'menu')), p));
+        await batch.commit();
+      }
+      if (catsNuevas.length) {
+        CATS = [...CATS, ...catsNuevas];
+        await updateDoc(doc(db, 'restaurantes', uid), { cats: CATS });
+      }
+      document.getElementById('importText').value = '';
+      cerrarImport();
+      showToast(`✓ ${platos.length} platos creados`, 'success');
+    } catch (e) {
+      console.error(e);
+      showToast('No se pudo crear todo. Revisa la conexión.', 'error');
+    }
+    btn.disabled = false; btn.textContent = 'Crear platos →';
+  });
+  if (Array.isArray(restoData.cats) && restoData.cats.length) CATS = restoData.cats;
+  configurarIngles();
+
+  onSnapshot(collection(db, 'restaurantes', uid, 'menu'), snap => {
+    allMenu = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderMenu();
+  });
+
+  // Botones de la tabla y filtros (un solo escuchador)
+  document.querySelector('.main').addEventListener('click', async e => {
+    const cat = e.target.closest('[data-cat]');
+    if (cat) { menuCatFilter = cat.dataset.cat; renderMenu(); return; }
+    const ed = e.target.closest('[data-edit]');
+    if (ed) { const p = allMenu.find(i => i.id === ed.dataset.edit); if (p) openPlatoModal(p); return; }
+    const del = e.target.closest('[data-del]');
+    if (del) {
+      if (!confirm('¿Eliminar este plato de la carta?')) return;
+      try { await deleteDoc(doc(db,'restaurantes',uid,'menu',del.dataset.del)); showToast('Plato eliminado', 'success'); }
+      catch (err) { showToast('No se pudo eliminar', 'error'); }
+    }
+  });
+  document.querySelector('.main').addEventListener('change', e => {
+    const t = e.target.closest('[data-toggle]');
+    if (t) updateDoc(doc(db,'restaurantes',uid,'menu',t.dataset.toggle), { activo: t.checked })
+      .catch(() => { showToast('No se pudo actualizar', 'error'); t.checked = !t.checked; });
+  });
+
+  document.getElementById('addPlatoBtn').addEventListener('click', () => openPlatoModal(null));
+  document.getElementById('platoModalClose').addEventListener('click', closePlatoModal);
+  document.getElementById('platoModalCancel').addEventListener('click', closePlatoModal);
+  document.getElementById('platoModal').addEventListener('click', function(e){ if(e.target===this) closePlatoModal(); });
+
+  document.getElementById('mEmojiBtn').addEventListener('click', () => toggleEmojiPanel());
+  document.getElementById('emojiGrid').addEventListener('click', (e) => {
+    const btn = e.target.closest('.emoji-option');
+    if (!btn) return;
+    setEmoji(btn.getAttribute('data-emoji'));
+    toggleEmojiPanel(false);
+  });
+
+  document.getElementById('menuSearch').addEventListener('input', function() { menuSearchTerm = this.value; renderMenuTable(); });
+  document.getElementById('menuSortSelect').addEventListener('change', function() { menuSort = this.value; renderMenuTable(); });
+
+  document.getElementById('platoModalSave').addEventListener('click', async () => {
+    const nombre = document.getElementById('mNombre').value.trim();
+    const precioTxt = String(document.getElementById('mPrecio').value).replace(',', '.');
+    const precio = Math.round(parseFloat(precioTxt) * 100) / 100;
+    const desc = document.getElementById('mDesc').value.trim();
+    const emoji = document.getElementById('mEmoji').value || '🍽️';
+    const categoria = document.getElementById('mCat').value;
+    const activo = document.getElementById('mActivo').checked;
+    const alergenos = algSeleccionados();
+
+    if (!nombre) { showToast('Ponle un nombre al plato', 'error'); return; }
+    if (isNaN(precio) || precio < 0) { showToast('Pon un precio válido (puede ser 0)', 'error'); return; }
+
+    const data = { nombre, precio, desc, emoji, categoria, activo, alergenos };
+    if (isPro(resto)) {
+      data.nombre_en = document.getElementById('mNombreEn').value.trim();
+      data.desc_en   = document.getElementById('mDescEn').value.trim();
+    }
+
+    const btn = document.getElementById('platoModalSave');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      if (editingPlatoId) {
+        await updateDoc(doc(db,'restaurantes',uid,'menu',editingPlatoId), data);
+        showToast('Plato actualizado ✓', 'success');
+      } else {
+        await addDoc(collection(db,'restaurantes',uid,'menu'), data);
+        showToast('Plato añadido ✓', 'success');
+      }
+      closePlatoModal();
+    } catch(e) {
+      showToast('Error al guardar', 'error');
+    }
+    btn.disabled = false; btn.textContent = 'Guardar plato →';
+  });
+});
+
+</script>
+</body>
+</html>

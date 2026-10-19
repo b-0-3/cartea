@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" href="./img/carteafondo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cocina – Cartéa</title>
+  <meta name="theme-color" content="#2d5a3d">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --ink:#0f0e0b; --cream:#faf7f2; --warm:#f2ebe0;
+      --gold:#c8963e; --gold-l:#e8b96a; --gold-bg:rgba(200,150,62,.09);
+      --rust:#c24a2b; --rust-bg:rgba(194,74,43,.09);
+      --green:#2d5a3d; --green-l:#4a8c63; --green-bg:rgba(45,90,61,.09);
+      --muted:#7a746c; --border:rgba(15,14,11,.1); --red:#b03020;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{height:100%;}
+    body{background:var(--cream);color:var(--ink);font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;overflow:hidden;}
+
+    header{
+      background:var(--green);padding:0 1.5rem;height:56px;flex-shrink:0;
+      display:flex;justify-content:space-between;align-items:center;
+      position:relative;z-index:50;overflow:hidden;
+    }
+    header::before{content:'';position:absolute;top:-60%;right:-10%;width:40%;padding-top:40%;background:var(--gold-l);opacity:.08;border-radius:50%;}
+    .h-left{display:flex;align-items:center;gap:.9rem;position:relative;z-index:2;}
+    .h-sep{width:1px;height:18px;background:rgba(255,255,255,.2);}
+    .h-badge{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.9);font-size:.6rem;font-weight:700;padding:.22rem .6rem;border-radius:2px;letter-spacing:.1em;text-transform:uppercase;}
+    .h-name{color:rgba(255,255,255,.55);font-size:.8rem;font-weight:300;}
+    .h-right{display:flex;align-items:center;gap:1rem;position:relative;z-index:2;}
+    .h-count{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:.85rem;font-weight:700;padding:.25rem .7rem;border-radius:20px;font-variant-numeric:tabular-nums;}
+    .sound-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:1rem;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;-webkit-tap-highlight-color:transparent;}
+    .sound-btn:active{transform:scale(.92);}
+    .sound-btn.muted{opacity:.45;}
+    .clock{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:#fff;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+
+    .audio-gate{position:fixed;inset:0;background:rgba(15,14,11,.92);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;color:#fff;text-align:center;padding:2rem;}
+    .audio-gate button{background:var(--gold);color:var(--ink);border:none;padding:.9rem 1.8rem;border-radius:4px;font-size:1rem;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;}
+    .audio-gate p{font-size:.85rem;color:rgba(255,255,255,.6);max-width:340px;}
+    .conn-error{display:none;background:var(--red);color:#fff;text-align:center;font-size:.85rem;font-weight:600;padding:.55rem 1rem;letter-spacing:.01em;}
+    .conn-error.show{display:block;}
+
+    /* ── SIGUIENTE: el pedido más antiguo, siempre en su propio hueco arriba ── */
+    .spotlight-wrap{padding:.9rem .9rem 0;}
+    .spotlight{
+      background:#fff;border-radius:5px;overflow:hidden;
+      display:flex;align-items:stretch;box-shadow:0 4px 18px rgba(15,14,11,.08);
+    }
+    .spotlight.t-ok{border-left:5px solid var(--green);}
+    .spotlight.t-warn{border-left:5px solid var(--gold);}
+    .spotlight.t-hot{border-left:5px solid var(--rust);animation:pulseHot 1.5s ease infinite;}
+    .spot-tag{
+      flex-shrink:0;width:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;
+      background:var(--ink);color:#fff;padding:.8rem .6rem;
+    }
+    .spot-tag .lbl{font-size:.6rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-l);}
+    .spot-tag .mesa{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:900;line-height:1;}
+    .spot-tag .timer{font-size:.78rem;font-weight:700;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.75);}
+    .spot-body{flex:1;padding:.85rem 1rem;display:flex;flex-direction:column;justify-content:center;gap:.4rem;}
+    .spot-items{display:flex;flex-wrap:wrap;gap:.4rem;}
+    .spot-items .i-chip{font-size:.9rem;padding:.3rem .6rem;}
+    .spot-nota{font-size:.78rem;color:var(--gold);font-weight:600;}
+    .spot-actions{flex-shrink:0;display:flex;align-items:center;padding-right:1rem;}
+    .spot-btn{background:var(--green);color:#fff;border:none;padding:0 1.6rem;height:100%;border-radius:3px;font-size:.95rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:.15s;}
+    .spot-btn:active{transform:scale(.96);}
+    .spot-btn:hover{background:var(--green-l);}
+
+    /* ── EN COCINA: rejilla fluida que llena todo el ancho disponible ── */
+    main{flex:1;overflow-y:auto;padding:.9rem;}
+    .queue-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:.5rem;}
+    .cocina-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+      gap:.6rem;
+      align-content:start;
+    }
+    .empty-main{grid-column:1/-1;color:var(--muted);font-size:.85rem;padding:3rem;text-align:center;background:#fff;border-radius:4px;border:1px dashed var(--border);}
+
+    .ticket{background:#fff;border:1px solid var(--border);border-radius:4px;overflow:hidden;transition:border-color .3s,box-shadow .3s;display:flex;flex-direction:column;}
+    .ticket.t-ok{border-top:3px solid var(--green);}
+    .ticket.t-warn{border-top:3px solid var(--gold);}
+    .ticket.t-hot{border-top:3px solid var(--rust);animation:pulseHot 1.5s ease infinite;}
+    .ticket.entrando{animation:slideIn .35s ease;}
+    @keyframes slideIn{from{transform:translateY(-8px) scale(.97);opacity:0;}to{transform:translateY(0) scale(1);opacity:1;}}
+    @keyframes pulseHot{0%,100%{box-shadow:0 0 0 rgba(194,74,43,0);}50%{box-shadow:0 0 14px rgba(194,74,43,.3);}}
+
+    .t-head{padding:.55rem .7rem;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
+    .t-mesa{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;}
+    .t-timer{font-size:.7rem;font-weight:700;padding:.15rem .45rem;border-radius:2px;font-variant-numeric:tabular-nums;}
+    .t-ok .t-timer{background:var(--green-bg);color:var(--green);}
+    .t-warn .t-timer{background:var(--gold-bg);color:var(--gold);}
+    .t-hot .t-timer{background:var(--rust-bg);color:var(--rust);}
+
+    /* Ítems en línea compacta, no una fila por ítem — cabe mucho más en menos alto */
+    .t-items{padding:.55rem .7rem;display:flex;flex-wrap:wrap;gap:.3rem;flex:1;}
+    .i-chip{background:var(--warm);border-radius:3px;padding:.2rem .45rem;font-size:.78rem;font-weight:600;white-space:nowrap;}
+    .i-chip b{color:var(--gold);font-weight:800;margin-right:.15rem;}
+
+    .t-nota{padding:.4rem .7rem;background:var(--gold-bg);border-top:1px solid rgba(200,150,62,.12);font-size:.72rem;color:var(--gold);}
+
+    .t-actions{padding:.45rem .7rem;border-top:1px solid var(--border);}
+    .t-btn{width:100%;padding:.6rem;border-radius:3px;border:1px solid;cursor:pointer;font-size:.85rem;font-weight:700;font-family:'DM Sans',sans-serif;transition:.15s;-webkit-tap-highlight-color:transparent;}
+    .t-btn:active{transform:scale(.96);}
+    .t-btn-done{background:var(--green);border-color:var(--green);color:#fff;}
+    .t-btn-done:hover{background:var(--green-l);}
+
+    /* ── LISTOS: franja fina abajo, se autolimpia sola ── */
+    .done-strip{
+      flex-shrink:0;background:#fff;border-top:1px solid var(--border);
+      padding:.5rem .9rem;display:flex;align-items:center;gap:.6rem;
+      overflow-x:auto;min-height:52px;
+    }
+    .done-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--green);flex-shrink:0;padding-right:.4rem;border-right:1px solid var(--border);}
+    .done-empty{font-size:.75rem;color:var(--muted);white-space:nowrap;}
+    .done-chip{
+      flex-shrink:0;background:var(--green-bg);border:1px solid rgba(45,90,61,.18);border-radius:20px;
+      padding:.35rem .5rem .35rem .8rem;display:flex;align-items:center;gap:.5rem;
+      font-size:.82rem;font-weight:700;color:var(--green);animation:slideIn .3s ease;
+      transition:opacity .5s;
+    }
+    .done-chip.fading{opacity:0;}
+    .done-chip button{background:#fff;border:1px solid rgba(45,90,61,.25);color:var(--green);width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:.75rem;line-height:1;-webkit-tap-highlight-color:transparent;}
+
+    .i-chip.bebida{opacity:.55;font-weight:500;}
+    .i-chip.bebida b{color:var(--muted);}
+
+    @media(max-width:560px){
+      .cocina-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));}
+      .clock{font-size:1.05rem;}
+      header{padding:0 1rem;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="audio-gate" id="audioGate">
+  <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--gold-l);">Cartéa · Cocina</div>
+  <p>Activa el aviso sonoro para que suene cada vez que entre un pedido nuevo, sin tener que mirar la pantalla.</p>
+  <button id="enableSoundBtn">🔔 Activar sonido y empezar</button>
+</div>
+
+<header>
+  <div class="h-left">
+    <img src="./img/carteablanco.png" alt="Cartéa" style="height:32px;display:block;">
+    <div class="h-sep"></div>
+    <div class="h-badge">Cocina</div>
+    <div class="h-name" id="restoNombre"></div>
+  </div>
+  <div class="h-right">
+    <div class="h-count" id="hCount">0 en cocina</div>
+    <button class="sound-btn" id="soundToggleBtn" title="Silenciar aviso">🔔</button>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<div class="conn-error" id="connError">⚠️ Sin conexión con el servidor — los pedidos podrían no actualizarse. Reintentando...</div>
+
+<div class="spotlight-wrap" id="spotlightWrap"></div>
+
+<main>
+  <div class="queue-label" id="queueLabel" style="display:none;">Después, por orden de llegada</div>
+  <div class="cocina-grid" id="colCocina"><div class="empty-main">Sin pedidos en cocina</div></div>
+</main>
+
+<div class="done-strip" id="doneStrip">
+  <div class="done-label">Listos</div>
+  <div class="done-empty" id="doneEmpty">Nada listo aún</div>
+</div>
+
+<script type="module">
+  import { collection, onSnapshot, doc, getDoc, updateDoc, query, where, serverTimestamp }
+    from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+  import { db, ensureAuth, escapeHtml, esDeBarra, usaBarra, ESTADOS_ACTIVOS, AUTO_COMPLETAR_MIN } from './js/common.js';
+
+  const uid = new URLSearchParams(location.search).get('uid');
+
+  let parada = false;   // si la pantalla se ha parado (cuenta desactivada, enlace malo...), no se pinta nada más
+  function pantallaError(msg){
+    parada = true;
+    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--cream);flex-direction:column;gap:.8rem;font-family:'DM Sans',sans-serif;color:var(--muted);text-align:center;padding:2rem"><img src="./img/cartea.png" alt="Cartéa" style="height:56px"><div>${msg}</div></div>`;
+  }
+
+  if(!uid){
+    pantallaError('Enlace no válido. Ábrelo desde tu panel (Pantalla de cocina).');
+    throw new Error('no uid');
+  }
+
+  const authReady = ensureAuth().catch(()=>{
+    pantallaError('No se pudo conectar. Comprueba la conexión y recarga la página.');
+    throw new Error('auth failed');
+  });
+
+  authReady.then(()=>{
+    onSnapshot(doc(db,'restaurantes',uid), snap=>{
+      if(!snap.exists()) { pantallaError('Restaurante no encontrado. Abre el enlace desde tu panel.'); return; }
+      if(snap.data().activo === false) { pantallaError('Esta cuenta está desactivada temporalmente.'); return; }
+      resto = snap.data();
+      const el = document.getElementById('restoNombre'); if (el) el.textContent = resto.nombre || '';
+    }, ()=>{});
+  });
+  setInterval(()=>{const c=document.getElementById('clock'); if(c) c.textContent=new Date().toLocaleTimeString('es-ES');},1000);
+
+  function showConnError(){ document.getElementById('connError')?.classList.add('show'); }
+  function hideConnError(){ document.getElementById('connError')?.classList.remove('show'); }
+
+  /* ── Aviso sonoro ── */
+  let audioCtx = null;
+  let soundOn = true;
+  function beep(){
+    if(!soundOn || !audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    [0, .16].forEach(delay=>{
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, t0+delay);
+      gain.gain.exponentialRampToValueAtTime(0.35, t0+delay+.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0+delay+.22);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t0+delay);
+      osc.stop(t0+delay+.25);
+    });
+  }
+
+  /* Pantalla siempre encendida (si el navegador lo permite) */
+  let wakeLock = null;
+  async function pedirPantallaEncendida(){
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && wakeLock !== null) pedirPantallaEncendida();
+  });
+
+  document.getElementById('enableSoundBtn').addEventListener('click', () => {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    beep();
+    pedirPantallaEncendida();
+    document.getElementById('audioGate').style.display = 'none';
+  });
+  document.getElementById('soundToggleBtn').addEventListener('click', function(){
+    soundOn = !soundOn;
+    this.textContent = soundOn ? '🔔' : '🔕';
+    this.classList.toggle('muted', !soundOn);
+  });
+
+  let resto = null;
+  let pedidos=[];        // los que ve la cocina (con algún plato; lo que es solo bebida lo lleva la barra)
+  let todosActivos=[];   // todos, para cerrar solos los "listos" olvidados
+  let knownIds = new Set();
+  let autoAdvancing = new Set();
+  let autoClearing = new Set();
+  let firstLoad = true;
+  const AUTO_CLEAR_MS = 45000; // los "Listos" se quitan de esta pantalla solos a los 45 s
+
+  function elapsed(ts){if(!ts)return{str:'0:00',mins:0};const s=Math.max(0,Math.floor((Date.now()-ts.seconds*1000)/1000));return{str:`${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`,mins:Math.floor(s/60)};}
+  const timerCls=m=>m>10?'t-hot':m>5?'t-warn':'t-ok';
+
+  function chips(p){
+    return (p.items||[]).map(i=>`<span class="i-chip${usaBarra(resto) && esDeBarra(i.categoria)?' bebida':''}"><b>${Number(i.qty)||0}×</b>${escapeHtml(i.nombre)}</span>`).join('');
+  }
+
+  function renderSpotlight(p){
+    const e=elapsed(p.timestamp);
+    const cls = timerCls(e.mins);
+    return `<div class="spotlight ${cls}" id="tk-${escapeHtml(p.id)}">
+      <div class="spot-tag">
+        <span class="lbl">Siguiente</span>
+        <span class="mesa">Mesa ${escapeHtml(p.mesa)}</span>
+        <span class="timer" data-ts="${p.timestamp?.seconds||0}">${e.str}</span>
+      </div>
+      <div class="spot-body">
+        <div class="spot-items">${chips(p)}</div>
+        ${p.nota?`<div class="spot-nota">📝 ${escapeHtml(p.nota)}</div>`:''}
+      </div>
+      <div class="spot-actions"><button class="spot-btn" data-listo="${escapeHtml(p.id)}">✓ Listo</button></div>
+    </div>`;
+  }
+
+  function renderTicket(p, isNew){
+    const e=elapsed(p.timestamp);
+    const cls = timerCls(e.mins);
+    return`<div class="ticket ${cls} ${isNew?'entrando':''}" id="tk-${escapeHtml(p.id)}">
+      <div class="t-head"><span class="t-mesa">M${escapeHtml(p.mesa)}</span><span class="t-timer" data-ts="${p.timestamp?.seconds||0}">${e.str}</span></div>
+      <div class="t-items">${chips(p)}</div>
+      ${p.nota?`<div class="t-nota">📝 ${escapeHtml(p.nota)}</div>`:''}
+      <div class="t-actions"><button class="t-btn t-btn-done" data-listo="${escapeHtml(p.id)}">✓ Listo</button></div>
+    </div>`;
+  }
+
+  function renderDoneChip(p){
+    return `<div class="done-chip" id="done-${escapeHtml(p.id)}">M${escapeHtml(p.mesa)} lista <button data-retirar="${escapeHtml(p.id)}" title="Quitar de la pantalla">✕</button></div>`;
+  }
+
+  function render(nuevoIds){
+    if (parada) return;
+    const enCocina = pedidos.filter(p=>p.estado==='nuevo'||p.estado==='preparando');
+    const listos = pedidos.filter(p=>p.estado==='listo' && !p.retiradoCocina);
+
+    // El más antiguo va en su propio hueco fijo arriba: siempre inequívoco.
+    const [next, ...resto] = enCocina;
+
+    document.getElementById('spotlightWrap').innerHTML = next ? renderSpotlight(next) : '';
+
+    document.getElementById('queueLabel').style.display = resto.length ? '' : 'none';
+    document.getElementById('colCocina').innerHTML = resto.length
+      ? resto.map(p=>renderTicket(p, nuevoIds.has(p.id))).join('')
+      : (next ? '' : '<div class="empty-main">Sin pedidos en cocina</div>');
+
+    document.getElementById('hCount').textContent = enCocina.length + ' en cocina';
+
+    const doneEmpty = document.getElementById('doneEmpty');
+    const strip = document.getElementById('doneStrip');
+    strip.querySelectorAll('.done-chip').forEach(el=>el.remove());
+    if (listos.length) {
+      doneEmpty.style.display = 'none';
+      listos.forEach(p => strip.insertAdjacentHTML('beforeend', renderDoneChip(p)));
+    } else {
+      doneEmpty.style.display = '';
+    }
+
+    // Quitar cada "listo" de esta pantalla a los 45 s (el pedido NO se borra:
+    // sigue para el camarero y queda en el historial de ventas).
+    listos.forEach(p => {
+      if (autoClearing.has(p.id)) return;
+      autoClearing.add(p.id);
+      setTimeout(() => {
+        const chip = document.getElementById('done-' + p.id);
+        if (chip) chip.classList.add('fading');
+        setTimeout(() => retirar(p.id), 500);
+      }, AUTO_CLEAR_MS);
+    });
+
+    if (nuevoIds.size) {
+      const firstNewId = [...nuevoIds][0];
+      const el = document.getElementById('tk-' + firstNewId);
+      if (el) el.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+  }
+
+  setInterval(()=>{
+    document.querySelectorAll('[data-ts]').forEach(el=>{
+      const ts=parseInt(el.dataset.ts);if(!ts)return;
+      const s=Math.max(0,Math.floor((Date.now()-ts*1000)/1000)),m=Math.floor(s/60);
+      el.textContent=`${m}:${(s%60).toString().padStart(2,'0')}`;
+      const wrap = el.closest('.ticket, .spotlight');
+      if(wrap){
+        wrap.classList.remove('t-ok','t-warn','t-hot');
+        wrap.classList.add(timerCls(m));
+      }
+    });
+  },1000);
+
+  /* Un pedido "listo" que nadie marca como servido se da por servido
+     pasados 30 min, para que la mesa no se quede "ocupada" para siempre. */
+  setInterval(()=>{
+    const limite = Date.now()/1000 - AUTO_COMPLETAR_MIN*60;
+    todosActivos.forEach(p=>{
+      const ref = p.listoEn?.seconds || p.timestamp?.seconds || 0;
+      if (p.estado==='listo' && ref && ref < limite) {
+        updateDoc(doc(db,'restaurantes',uid,'pedidos',p.id),{estado:'completado'}).catch(()=>{});
+      }
+    });
+  }, 60000);
+
+  authReady.then(()=>{
+    onSnapshot(query(collection(db,'restaurantes',uid,'pedidos'), where('estado','in',ESTADOS_ACTIVOS)), snap=>{
+      hideConnError();
+      pedidos=[]; todosActivos=[];
+      const currentIds = new Set();
+      snap.forEach(d=>{
+        const p={id:d.id,...d.data()};
+        todosActivos.push(p);
+        if (usaBarra(resto) && !(p.items||[]).some(i=>!esDeBarra(i.categoria))) return;   // solo bebidas y hay barra → lo lleva la barra
+        currentIds.add(p.id);
+        pedidos.push(p);
+      });
+      pedidos.sort((a,b)=>(a.timestamp?.seconds||Infinity)-(b.timestamp?.seconds||Infinity));
+
+      const nuevoIds = new Set();
+      if(!firstLoad){
+        pedidos.forEach(p=>{
+          if(p.estado==='nuevo' && !knownIds.has(p.id)) nuevoIds.add(p.id);
+        });
+        if(nuevoIds.size) beep();
+      }
+      firstLoad = false;
+      knownIds = currentIds;
+
+      render(nuevoIds);
+
+      pedidos.forEach(p=>{
+        if(p.estado==='nuevo' && !autoAdvancing.has(p.id)){
+          autoAdvancing.add(p.id);
+          updateDoc(doc(db,'restaurantes',uid,'pedidos',p.id),{estado:'preparando'}).catch(()=>{});
+        }
+      });
+    }, ()=>{ showConnError(); });
+  });
+
+  function marcarListo(id){
+    return updateDoc(doc(db,'restaurantes',uid,'pedidos',id),{estado:'listo', listoEn: serverTimestamp()})
+      .catch(()=>{ showConnError(); });
+  }
+  function retirar(id){
+    return updateDoc(doc(db,'restaurantes',uid,'pedidos',id),{retiradoCocina:true}).catch(()=>{});
+  }
+
+  document.body.addEventListener('click', e=>{
+    const l = e.target.closest('[data-listo]');
+    if (l) { marcarListo(l.dataset.listo); return; }
+    const r = e.target.closest('[data-retirar]');
+    if (r) retirar(r.dataset.retirar);
+  });
+</script>
+</body>
+</html>

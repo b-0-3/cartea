@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" type="image/png" href="./img/carteafondo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Cartéa – Configuración</title>
+  <!-- Modo app al añadir a pantalla de inicio (iOS) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cartéa">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2d5a3d">
+  <link rel="apple-touch-icon" href="./img/carteafondo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="app-loading" id="appLoading">
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:52px;display:block;">
+  <div class="al-dots"><span class="al-dot"></span><span class="al-dot"></span><span class="al-dot"></span></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+  <button class="hamburger" id="hamburgerBtn">☰</button>
+  <img src="./img/carteablanco.png" alt="Cartéa" style="height:34px;display:block;">
+  <span class="sb-badge" id="mobileBadge" style="display:none;margin-left:auto">0</span>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-inner">
+    <div class="sb-header">
+      <img src="./img/carteablanco.png" alt="Cartéa" style="height:48px;display:block;margin-bottom:.3rem;">
+      <div class="sb-name" id="sidebarNombre">Cargando…</div>
+    </div>
+    <div class="sb-divider"></div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar" id="sbAvatar">–</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sbPersona">–</div>
+          <div class="sb-user-role">Administrador</div>
+        </div>
+      </div>
+      <button class="btn-logout" id="logoutBtn">⎋ &nbsp;Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="page active">
+
+    <div class="page-hd">
+      <div class="page-eyebrow">Ajustes</div>
+      <div class="page-title">Configuración</div>
+      <div class="page-sub">Los datos de tu restaurante, tu plan y tu cuenta</div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Datos del restaurante</div></div>
+          <div class="card-body">
+            <div class="field"><label>Nombre del restaurante</label><input type="text" id="cfgNombre" maxlength="60" placeholder="Nombre visible para los clientes"/></div>
+            <div class="field"><label>Tu nombre</label><input type="text" id="cfgPersona" maxlength="60" placeholder="Tu nombre"/></div>
+            <div class="field"><label>Email de la cuenta</label><input type="email" id="cfgEmail" disabled style="opacity:.5;cursor:not-allowed;"/><div class="form-hint">Para cambiarlo, escríbenos a hola@mesaqr.com.</div></div>
+            <button class="btn-primary" id="saveConfigBtn" style="width:100%;justify-content:center;">Guardar cambios →</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd"><div><div class="card-title">Categorías de la carta</div><div class="card-sub">El orden de aquí es el orden en que las ve el cliente</div></div></div>
+          <div class="card-body">
+            <div class="field"><label>Añadir nueva categoría</label>
+              <div style="display:flex;gap:.5rem;">
+                <input type="text" id="newCatInput" maxlength="30" placeholder="Ej: Arroces" style="flex:1"/>
+                <button class="btn-primary" id="addCatBtn">＋</button>
+              </div>
+            </div>
+            <div id="catsList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" id="planCardCfg"></div>
+
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Tu cuenta</div></div>
+          <div class="card-body">
+            <div style="display:flex;align-items:center;gap:1rem;padding:.8rem;background:var(--warm);border-radius:4px;margin-bottom:1rem;">
+              <div class="sb-avatar" id="cfgAvatar" style="width:48px;height:48px;font-size:1.2rem;background:var(--green);">–</div>
+              <div style="min-width:0;">
+                <div style="font-weight:600;font-size:.9rem;" id="cfgNombreDisp">–</div>
+                <div style="font-size:.75rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;" id="cfgEmailDisp">–</div>
+              </div>
+            </div>
+            <div class="field"><label>Fecha de alta</label><input type="text" id="cfgFecha" disabled style="opacity:.5;cursor:not-allowed;"/></div>
+            <div class="field"><label>ID del restaurante</label><input type="text" id="cfgUid" disabled style="opacity:.5;cursor:not-allowed;font-family:monospace;font-size:.75rem;"/><div class="form-hint">Dínoslo si nos escribes para pedir ayuda.</div></div>
+            <div class="btn-group">
+              <button class="btn-ghost btn-sm" id="resetPassBtn">🔑 Cambiar contraseña</button>
+              <button class="btn-ghost btn-sm" id="exportBtn">⬇ Descargar mis datos</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd"><div class="card-title" style="color:var(--rust);">Zona de peligro</div></div>
+          <div class="card-body">
+            <div class="danger-zone">
+              <p>Borra <b>todo el historial de pedidos</b> (también las ventas) y los avisos pendientes. No se puede deshacer. Si solo quieres empezar el día, no hace falta: las cifras de "hoy" se reinician solas a las 5:00.</p>
+              <button class="btn-sm btn-danger-sm" id="clearHistBtn" style="padding:.5rem 1rem;font-size:.8rem;">🗑 Borrar historial de pedidos</button>
+            </div>
+            <p style="font-size:.75rem;color:var(--muted);margin-top:.9rem;line-height:1.6;">¿Quieres darte de baja y borrar tu cuenta? Escríbenos a <a href="mailto:hola@mesaqr.com" style="color:var(--green)">hola@mesaqr.com</a> desde el email de la cuenta.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+
+import { initPanel, db, auth } from './js/panel-core.js';
+import { doc, updateDoc, collection, getDocs, writeBatch }
+  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { escapeHtml, isPro, mailtoPro, mesasEfectivas, CATS_POR_DEFECTO, LIMITE_MESAS_BASICO } from './js/common.js';
+
+let uid = null;
+let restoData = null;
+let CATS = [];
+
+function renderCatsList() {
+  const el = document.getElementById('catsList');
+  if (!CATS.length) { el.innerHTML = '<div class="form-hint">Sin categorías.</div>'; return; }
+  el.innerHTML = CATS.map((c,i) => `
+    <div style="display:flex;align-items:center;gap:.4rem;padding:.45rem .2rem;border-bottom:1px solid var(--border);">
+      <span style="flex:1;font-size:.85rem;font-weight:600;">${escapeHtml(c)}</span>
+      <button class="btn-sm btn-ghost" data-up="${i}" ${i===0?'disabled style="opacity:.3"':''} title="Subir">↑</button>
+      <button class="btn-sm btn-ghost" data-down="${i}" ${i===CATS.length-1?'disabled style="opacity:.3"':''} title="Bajar">↓</button>
+      <button class="btn-sm btn-danger-sm" data-delcat="${i}" title="Quitar">×</button>
+    </div>`).join('');
+}
+
+async function guardarCats(msg) {
+  try {
+    await updateDoc(doc(db,'restaurantes',uid), { cats: CATS });
+    renderCatsList();
+    if (msg) showToast(msg, 'success');
+  } catch (e) { showToast('No se pudo guardar', 'error'); }
+}
+
+document.getElementById('catsList').addEventListener('click', async e => {
+  const up = e.target.closest('[data-up]'), down = e.target.closest('[data-down]'), del = e.target.closest('[data-delcat]');
+  if (up) { const i = +up.dataset.up; [CATS[i-1], CATS[i]] = [CATS[i], CATS[i-1]]; guardarCats(); }
+  else if (down) { const i = +down.dataset.down; [CATS[i+1], CATS[i]] = [CATS[i], CATS[i+1]]; guardarCats(); }
+  else if (del) {
+    const i = +del.dataset.delcat;
+    if (!confirm(`¿Quitar la categoría "${CATS[i]}"? Los platos que la usen seguirán en la carta, al final.`)) return;
+    CATS.splice(i, 1); guardarCats('Categoría quitada');
+  }
+});
+
+function renderPlan() {
+  const pro = isPro(restoData);
+  document.getElementById('planCardCfg').innerHTML = `
+    <div class="card-hd"><div class="card-title">Tu plan</div><span class="plan-pill ${pro?'pro':''}">${pro?'Pro':'Básico'}</span></div>
+    <div class="card-body" style="font-size:.85rem;line-height:1.7;">
+      ${pro
+        ? `Tienes <b>Cartéa Pro</b>: hasta 200 mesas, página de Ventas y carta en inglés. Para cualquier cambio en tu plan o factura, escríbenos a <a href="mailto:hola@mesaqr.com" style="color:var(--green)">hola@mesaqr.com</a>.`
+        : `Plan <b>Básico</b> (gratis): hasta ${LIMITE_MESAS_BASICO} mesas, carta, QR, pedidos, cocina y equipo.<br>
+           Con <b>Pro (29 €/mes, sin permanencia)</b> además: hasta 200 mesas, página de Ventas con estadísticas y carta en inglés.
+           <div style="margin-top:.8rem"><a class="btn-primary" href="${mailtoPro(restoData)}">Pasar a Pro →</a></div>
+           <div class="form-hint" style="margin-top:.5rem">Te respondemos con los datos de pago y lo activamos en el día.</div>`}
+    </div>`;
+}
+
+initPanel().then(({ uid: u, restoData: rd }) => {
+  uid = u; restoData = rd;
+  CATS = Array.isArray(restoData.cats) && restoData.cats.length ? [...restoData.cats] : [...CATS_POR_DEFECTO];
+
+  document.getElementById('cfgNombre').value  = restoData.nombre || '';
+  document.getElementById('cfgPersona').value = restoData.persona || '';
+  document.getElementById('cfgEmail').value   = restoData.email || '';
+  document.getElementById('cfgUid').value     = uid || '';
+  document.getElementById('cfgFecha').value   = restoData.creadoEn ? new Date(restoData.creadoEn).toLocaleDateString('es-ES') : '–';
+  document.getElementById('cfgNombreDisp').textContent = restoData.nombre || '';
+  document.getElementById('cfgEmailDisp').textContent  = restoData.email || '';
+  const initials = (restoData.persona||restoData.nombre||'X').trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('cfgAvatar').textContent = initials;
+  renderCatsList();
+  renderPlan();
+
+  document.getElementById('saveConfigBtn').addEventListener('click', async () => {
+    const nombre  = document.getElementById('cfgNombre').value.trim();
+    const persona = document.getElementById('cfgPersona').value.trim();
+    if (!nombre || !persona) { showToast('Rellena todos los campos', 'error'); return; }
+    const btn = document.getElementById('saveConfigBtn');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      await updateDoc(doc(db,'restaurantes',uid), {nombre, persona});
+      restoData.nombre = nombre; restoData.persona = persona;
+      document.getElementById('sidebarNombre').textContent = nombre;
+      document.getElementById('sbPersona').textContent = persona;
+      const ini = persona.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      document.getElementById('sbAvatar').textContent = ini;
+      document.getElementById('cfgAvatar').textContent = ini;
+      document.getElementById('cfgNombreDisp').textContent = nombre;
+      showToast('Configuración guardada ✓', 'success');
+    } catch (e) { showToast('No se pudo guardar', 'error'); }
+    btn.disabled = false; btn.textContent = 'Guardar cambios →';
+  });
+
+  const addCat = () => {
+    const val = document.getElementById('newCatInput').value.trim();
+    if (!val) return;
+    if (CATS.some(c => c.toLowerCase() === val.toLowerCase())) { showToast('Esa categoría ya existe', 'error'); return; }
+    CATS.push(val);
+    document.getElementById('newCatInput').value = '';
+    guardarCats('Categoría añadida ✓');
+  };
+  document.getElementById('addCatBtn').addEventListener('click', addCat);
+  document.getElementById('newCatInput').addEventListener('keydown', e => { if (e.key === 'Enter') addCat(); });
+
+  document.getElementById('resetPassBtn').addEventListener('click', async () => {
+    try {
+      await sendPasswordResetEmail(auth, restoData.email || auth.currentUser.email);
+      showToast('Te hemos enviado un email para cambiar la contraseña ✓', 'success');
+    } catch (e) { showToast('No se pudo enviar el email', 'error'); }
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('exportBtn');
+    btn.disabled = true; btn.textContent = 'Preparando…';
+    try {
+      const cols = ['menu','pedidos','trabajadores','notas'];
+      const snaps = await Promise.all(cols.map(c => getDocs(collection(db,'restaurantes',uid,c))));
+      const datos = { restaurante: restoData, exportadoEn: new Date().toISOString() };
+      cols.forEach((c,k) => { datos[c] = snaps[k].docs.map(d => ({ id: d.id, ...d.data() })); });
+      const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'cartea-mis-datos-' + new Date().toISOString().slice(0,10) + '.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } catch (e) { showToast('No se pudieron descargar los datos', 'error'); }
+    btn.disabled = false; btn.textContent = '⬇ Descargar mis datos';
+  });
+
+  document.getElementById('clearHistBtn').addEventListener('click', async () => {
+    const ok = prompt('Esto borra TODOS los pedidos y las ventas guardadas. Escribe BORRAR para confirmar:');
+    if (ok !== 'BORRAR') return;
+    try {
+      const [pedidosSnap, avisosSnap] = await Promise.all([
+        getDocs(collection(db,'restaurantes',uid,'pedidos')),
+        getDocs(collection(db,'restaurantes',uid,'avisos'))
+      ]);
+      const refs = [...pedidosSnap.docs, ...avisosSnap.docs].map(d => d.ref);
+      for (let k = 0; k < refs.length; k += 400) {        // Firestore admite 500 por lote
+        const batch = writeBatch(db);
+        refs.slice(k, k + 400).forEach(r => batch.delete(r));
+        await batch.commit();
+      }
+      showToast('Historial borrado ✓', 'success');
+    } catch (e) { showToast('No se pudo borrar todo', 'error'); }
+  });
+});
+
+</script>
+</body>
+</html>
