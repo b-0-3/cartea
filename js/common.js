@@ -1,0 +1,156 @@
+/* ════════════════════════════════════════════════
+   COMMON — lo que comparten TODAS las páginas:
+   carta del cliente, cocina, acceso del equipo y panel.
+   Una sola conexión a Firebase y unas cuantas utilidades.
+════════════════════════════════════════════════ */
+import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+export const FB_CONFIG = {
+  apiKey:            'AIzaSyDhzw8E0kZh_NMrtixCtfpZ2rKQ9w0VpnM',
+  authDomain:        'mesaqr-73606.firebaseapp.com',
+  projectId:         'mesaqr-73606',
+  storageBucket:     'mesaqr-73606.firebasestorage.app',
+  messagingSenderId: '717696646582',
+  appId:             '1:717696646582:web:25caf894e3597a51401517'
+};
+
+export const app  = getApps().length ? getApps()[0] : initializeApp(FB_CONFIG);
+export const auth = getAuth(app);
+export const db   = getFirestore(app);
+
+/* ── Sesión ──
+   Carta, cocina y equipo necesitan "estar dentro" para leer datos.
+   Si en este navegador ya hay una sesión (por ejemplo, la del dueño
+   con su email), se reutiliza: así abrir la carta para probarla NO
+   cierra la sesión del panel. Si no hay ninguna, se entra como anónimo. */
+export function ensureAuth() {
+  return new Promise((resolve, reject) => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      unsub();
+      if (user) { resolve(user); return; }
+      signInAnonymously(auth).then(c => resolve(c.user)).catch(reject);
+    }, reject);
+  });
+}
+
+/* ── Texto seguro ──
+   Todo lo que escribe un cliente o un trabajador (notas, nombres...)
+   pasa por aquí antes de pintarse, para que nadie pueda colar código. */
+export function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+}
+
+/* ── Dinero ── 12.5 → "12,50 €" */
+export function eur(n) {
+  return (Number(n) || 0).toLocaleString('es-ES', { style:'currency', currency:'EUR' });
+}
+
+/* ── Jornada ──
+   "Hoy" para un restaurante no acaba a medianoche: la jornada
+   empieza a las 5:00. Un pedido a la 1:30 cuenta para la noche anterior. */
+export const HORA_INICIO_JORNADA = 5;
+export function inicioJornada(ref = new Date()) {
+  const d = new Date(ref);
+  if (d.getHours() < HORA_INICIO_JORNADA) d.setDate(d.getDate() - 1);
+  d.setHours(HORA_INICIO_JORNADA, 0, 0, 0);
+  return d;
+}
+
+/* Suma días "de calendario" (respeta los cambios de hora de marzo y octubre) */
+export function jornadaMasDias(inicio, dias) {
+  const d = new Date(inicio);
+  d.setDate(d.getDate() + dias);
+  d.setHours(HORA_INICIO_JORNADA, 0, 0, 0);
+  return d;
+}
+/* Llama a cb() cada vez que empieza una jornada nueva (a las 5:00),
+   para las pantallas que se quedan abiertas toda la noche. */
+export function alCambiarJornada(cb) {
+  const programar = () => {
+    const siguiente = jornadaMasDias(inicioJornada(), 1);
+    setTimeout(() => { cb(); programar(); }, Math.max(1000, siguiente - Date.now() + 1000));
+  };
+  programar();
+}
+
+export function horaDe(ts) {
+  if (!ts || !ts.seconds) return '';
+  return new Date(ts.seconds * 1000).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+}
+
+/* ── Pedidos ── */
+export const ESTADOS_ACTIVOS = ['nuevo', 'preparando', 'listo'];
+export const AUTO_COMPLETAR_MIN = 30; // un pedido "listo" que nadie marca como servido se da por servido a los 30 min
+export const ESTADO_LABEL = {
+  nuevo: 'Nuevo', preparando: 'En cocina', listo: 'Listo',
+  completado: 'Servido', cancelado: 'Cancelado'
+};
+
+/* ── Planes ── */
+export const LIMITE_MESAS_BASICO = 5;
+export const LIMITE_MESAS_PRO = 200;
+export const EMAIL_CONTACTO = 'hola@mesaqr.com';
+export function isPro(resto) { return !!resto && resto.plan === 'pro'; }
+export function mesasEfectivas(resto) {
+  const n = Number(resto?.mesas) || LIMITE_MESAS_BASICO;
+  return isPro(resto) ? Math.min(n, LIMITE_MESAS_PRO) : Math.min(n, LIMITE_MESAS_BASICO);
+}
+export function mailtoPro(resto) {
+  const asunto = encodeURIComponent('Quiero pasar a Cartéa Pro');
+  const cuerpo = encodeURIComponent(
+    'Hola, quiero activar el plan Pro.\n\nRestaurante: ' + (resto?.nombre || '') +
+    '\nEmail de la cuenta: ' + (resto?.email || '') + '\nID: ' + (resto?.uid || ''));
+  return 'mailto:' + EMAIL_CONTACTO + '?subject=' + asunto + '&body=' + cuerpo;
+}
+
+/* ── PIN del equipo ──
+   El PIN nunca se guarda "a la vista" para los de fuera: se guarda una
+   huella (hash) de restaurante+PIN. Con el PIN correcto se encuentra la
+   ficha; sin él, no hay forma de listar las fichas del equipo. */
+export async function sha256Hex(texto) {
+  const data = new TextEncoder().encode(texto);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+export function pinHash(restId, pin) { return sha256Hex(restId + ':' + pin); }
+
+/* ── Alérgenos ── los 14 que obliga a informar la normativa europea */
+export const ALERGENOS = [
+  { id:'gluten',         icon:'🌾', es:'Gluten',            en:'Gluten' },
+  { id:'crustaceos',     icon:'🦐', es:'Crustáceos',        en:'Crustaceans' },
+  { id:'huevos',         icon:'🥚', es:'Huevos',            en:'Eggs' },
+  { id:'pescado',        icon:'🐟', es:'Pescado',           en:'Fish' },
+  { id:'cacahuetes',     icon:'🥜', es:'Cacahuetes',        en:'Peanuts' },
+  { id:'soja',           icon:'🌱', es:'Soja',              en:'Soy' },
+  { id:'lacteos',        icon:'🥛', es:'Lácteos',           en:'Milk' },
+  { id:'frutos_cascara', icon:'🌰', es:'Frutos de cáscara', en:'Tree nuts' },
+  { id:'apio',           icon:'🥬', es:'Apio',              en:'Celery' },
+  { id:'mostaza',        icon:'🟡', es:'Mostaza',           en:'Mustard' },
+  { id:'sesamo',         icon:'⚪', es:'Sésamo',            en:'Sesame' },
+  { id:'sulfitos',       icon:'🍷', es:'Sulfitos',          en:'Sulphites' },
+  { id:'altramuces',     icon:'🌼', es:'Altramuces',        en:'Lupin' },
+  { id:'moluscos',       icon:'🦪', es:'Moluscos',          en:'Molluscs' },
+];
+
+/* ── Categorías ── */
+export const CATS_POR_DEFECTO = ['Entrantes','Principales','Pizzas','Pastas','Carnes','Pescados','Postres','Bebidas'];
+export const CAT_EN = {
+  'Entrantes':'Starters', 'Principales':'Mains', 'Pizzas':'Pizzas', 'Pastas':'Pasta',
+  'Carnes':'Meat', 'Pescados':'Fish', 'Postres':'Desserts', 'Bebidas':'Drinks',
+  'Arroces':'Rice dishes', 'Ensaladas':'Salads', 'Tapas':'Tapas', 'Raciones':'Sharing plates',
+  'Bocadillos':'Sandwiches', 'Hamburguesas':'Burgers', 'Vinos':'Wines', 'Cervezas':'Beers',
+  'Cócteles':'Cocktails', 'Cafés':'Coffee', 'Menú del día':'Set menu', 'Sopas':'Soups'
+};
+/* Categorías que prepara la barra (no la cocina) */
+export const CATS_BARRA = ['bebida','barra','cóctel','coctel','vino','cerveza','café','cafe','refresco','licor'];
+/* ¿Este restaurante tiene a alguien en barra? Lo mantiene al día el panel
+   (Equipo/Resumen). Si no hay barra, las bebidas las saca la cocina como siempre. */
+export function usaBarra(resto) { return !!resto && resto.hayBarra === true; }
+export function esDeBarra(categoria) {
+  const c = String(categoria || '').toLowerCase();
+  return CATS_BARRA.some(k => c.includes(k));
+}
