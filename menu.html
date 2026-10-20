@@ -315,7 +315,7 @@
 <script type="module">
 import { collection, onSnapshot, addDoc, doc, getDoc, query, where, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { db, ensureAuth, escapeHtml, eur, isPro, ALERGENOS, CATS_POR_DEFECTO, CAT_EN, opcionesDe } from './js/common.js';
+import { db, ensureAuth, escapeHtml, eur, isPro, ALERGENOS, CATS_POR_DEFECTO, CAT_EN, opcionesDe, cargarCartaDemo, nombreCartaValido, salaValida } from './js/common.js';
 
 /* ── Textos en los dos idiomas ── */
 const T = {
@@ -324,7 +324,7 @@ const T = {
     callWaiter:'Llamar camarero', askBill:'Pedir cuenta', seeOrder:'Ver mi pedido',
     yourOrder:'Tu pedido', confirm:'Confirmar pedido →', sending:'Enviando pedido...',
     notePh:'Notas para cocina (alergias, sin gluten...)', added:'Añadido ✓',
-    sent:'✅ Pedido enviado a cocina', error:'❌ Error. Inténtalo de nuevo.',
+    sent:'✅ Pedido enviado a cocina', sentBar:'✅ Pedido enviado a barra', notePhBar:'Notas para la barra (alergias, sin hielo...)', error:'❌ Error. Inténtalo de nuevo.',
     waiterOk:'🔔 Camarero en camino...', billOk:'🧾 Cuenta solicitada', coal:'Cambiar carbón', coalOk:'🔥 Ahora te cambian el carbón',
     wait:'Ya hemos avisado. Espera un momento 🙂', soldOut:'Agotado', perUnit:'/ud',
     empty:'El restaurante aún no ha añadido platos.', badQr:'QR no válido',
@@ -341,7 +341,7 @@ const T = {
     callWaiter:'Call waiter', askBill:'Ask for the bill', seeOrder:'View my order',
     yourOrder:'Your order', confirm:'Place order →', sending:'Sending order...',
     notePh:'Notes for the kitchen (allergies, gluten free...)', added:'Added ✓',
-    sent:'✅ Order sent to the kitchen', error:'❌ Error. Please try again.',
+    sent:'✅ Order sent to the kitchen', sentBar:'✅ Order sent to the bar', notePhBar:'Notes for the bar (allergies, no ice...)', error:'❌ Error. Please try again.',
     waiterOk:'🔔 A waiter is on the way...', billOk:'🧾 Bill requested', coal:'Change coal', coalOk:'🔥 Your coal is on the way',
     wait:'We already let them know. One moment please 🙂', soldOut:'Sold out', perUnit:'/each',
     empty:'This restaurant has not added any dishes yet.', badQr:'Invalid QR code',
@@ -354,6 +354,7 @@ const T = {
     removed:'Some dishes are no longer available and were removed from your order.'
   }
 };
+let resto = null;         // datos del restaurante (se declara arriba: los textos lo miran)
 const LS_LANG = 'cartea_lang';
 let lang = 'es';
 const t = k => (T[lang] && T[lang][k]) || T.es[k] || k;
@@ -361,7 +362,7 @@ const t = k => (T[lang] && T[lang][k]) || T.es[k] || k;
 function applyStaticTexts() {
   document.documentElement.lang = lang;
   document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.getAttribute('data-t')); });
-  document.getElementById('noteInput').placeholder = t('notePh');
+  document.getElementById('noteInput').placeholder = t(resto && resto.pantalla === 'barra' ? 'notePhBar' : 'notePh');
   document.getElementById('hEyebrow').textContent = t('eyebrow');
   document.getElementById('mesaBadge').textContent = t('table') + ' ' + mesa;
   const ls = document.getElementById('lsSub'); if (ls) ls.textContent = t('loading');
@@ -370,9 +371,18 @@ function applyStaticTexts() {
 
 /* ── Parámetros del QR ── */
 const params = new URLSearchParams(location.search);
-const DEMO = params.has('demo');   // menu.html?demo → carta de ejemplo para enseñar a restaurantes
+/* Modos demo (sin cuenta):
+   menu.html?demo                        → carta de ejemplo, todo simulado en el móvil
+   menu.html?demo=horizonte              → la carta preparada de ese local (cartas/horizonte.txt), simulado
+   menu.html?demo=horizonte&sala=x7k2p9  → EN DIRECTO: el pedido llega a la pantalla cocina.html?demo=horizonte&sala=x7k2p9 */
+const DEMO = params.has('demo');
+const DEMO_CARTA = nombreCartaValido(params.get('demo')) ? params.get('demo') : '';
+const SALA = DEMO && DEMO_CARTA && salaValida(params.get('sala')) ? params.get('sala') : '';
 const uid  = params.get('uid');
-const mesa = (params.get('mesa') || (DEMO ? '7' : '')).trim();
+const mesaRaw = (params.get('mesa') || (DEMO ? '7' : '')).trim();
+const mesa = DEMO && !/^\d{1,4}$/.test(mesaRaw) ? '7' : mesaRaw;
+/* Dónde se guardan pedidos y avisos: en el restaurante, o en la "sala" de la demo en directo */
+const base = (...segs) => SALA ? collection(db, 'demos', SALA, ...segs) : collection(db, 'restaurantes', uid, ...segs);
 
 let loaderHidden = false;
 function hideLoader() {
@@ -398,7 +408,6 @@ if (!DEMO && (!uid || !/^[A-Za-z0-9]{10,40}$/.test(uid) || !/^\d{1,4}$/.test(mes
 }
 
 /* ── Estado ── */
-let resto = null;
 let menuItems = [];      // todos los platos
 let cart = {};           // clave → cantidad (clave = id del plato, o "id::opción" si el cliente eligió sabor/tipo)
 const SEP = '::';
@@ -445,16 +454,42 @@ const DEMO_MENU = [
   { id:'d14', categoria:'Bebidas', emoji:'🥤', nombre:'Refresco', nombre_en:'Soft drink', desc:'', desc_en:'', precio:2.5, alergenos:[], opciones:{ titulo:'Sabor', valores:['Cola','Cola zero','Naranja','Limón'] } },
 ].map(i => ({ activo: true, ...i }));
 
-function iniciarDemo() {
+async function iniciarDemo() {
   resto = DEMO_RESTO;
   menuItems = DEMO_MENU;
+  if (DEMO_CARTA) {
+    try { const c = await cargarCartaDemo(DEMO_CARTA); resto = c.resto; menuItems = c.menu; }
+    catch (e) { fullScreenMsg(t('noConn'), t('noConnSub')); return; }
+  }
   const banner = document.createElement('div');
   banner.style.cssText = 'background:var(--gold);color:var(--ink);font-size:.72rem;font-weight:700;text-align:center;padding:.5rem .8rem;line-height:1.4';
-  banner.innerHTML = 'MODO DEMO · Así verán la carta tus clientes. Prueba a pedir: el pedido "llega a cocina" y vuelve listo. <a href="index.html" style="color:var(--ink)">Conoce Cartéa →</a>';
+  const donde = resto.pantalla === 'barra' ? 'una pantalla en barra' : 'la pantalla de cocina';
+  banner.innerHTML = SALA
+    ? 'DEMO EN DIRECTO · Pide algo y mira cómo llega a ' + donde + ' 👀'
+    : DEMO_CARTA
+      ? 'DEMO · Así verían vuestros clientes la carta. Prueba a pedir: en el local, el pedido llega al momento a ' + donde + '.'
+      : 'MODO DEMO · Así verán la carta tus clientes. Prueba a pedir: el pedido "llega a cocina" y vuelve listo. <a href="index.html" style="color:var(--ink)">Conoce Cartéa →</a>';
   document.body.insertBefore(banner, document.body.firstChild);
   configurarIdioma();
   activarCarbon();
   renderMenu(); hideLoader();
+  if (SALA) {   // en directo: conexión anónima y seguimiento de mis pedidos de esta sala
+    try {
+      const user = await ensureAuth();
+      myUid = user.uid;
+      onSnapshot(query(base('pedidos'), where('cliente', '==', myUid)), s => {
+        const antes = new Map(misPedidos.map(p => [p.id, p.estado]));
+        misPedidos = [];
+        s.forEach(d => misPedidos.push({ id: d.id, ...d.data() }));
+        misPedidos.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+        if (misPedidos.some(p => p.estado === 'listo' && antes.has(p.id) && antes.get(p.id) !== 'listo')) {
+          showToast(t('readyToast'));
+          try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {}
+        }
+        renderTracking();
+      }, () => {});
+    } catch (e) { showToast(t('error')); }
+  }
 }
 function pedidoDemo(items, total) {
   const p = { id: 'demo' + Date.now(), items, total, estado: 'nuevo', timestamp: { seconds: Math.floor(Date.now() / 1000) } };
@@ -719,15 +754,15 @@ document.getElementById('confirmBtn').addEventListener('click', async () => {
   }));
   const total = Math.round(items.reduce((a, i) => a + i.precio * i.qty, 0) * 100) / 100;
   try {
-    if (DEMO) pedidoDemo(items, total);
-    else await addDoc(collection(db, 'restaurantes', uid, 'pedidos'), {
+    if (DEMO && !SALA) pedidoDemo(items, total);
+    else await addDoc(base('pedidos'), {
       mesa, items, total, nota: document.getElementById('noteInput').value.trim().slice(0, 300),
       estado: 'nuevo', timestamp: serverTimestamp(), cliente: myUid, idioma: lang
     });
     closeCart();
     const ids = [...new Set(Object.keys(cart).map(idDeClave))]; cart = {}; syncCart(); ids.forEach(updateCtrl);
     document.getElementById('noteInput').value = '';
-    showToast(t('sent'));
+    showToast(t(resto && resto.pantalla === 'barra' ? 'sentBar' : 'sent'));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (e) {
     console.error(e);
@@ -741,11 +776,11 @@ const ultimoAviso = {};
 async function enviarAviso(tipo, okMsg) {
   const ahora = Date.now();
   if (ultimoAviso[tipo] && ahora - ultimoAviso[tipo] < 60000) { showToast(t('wait')); return; }
-  if (DEMO) { ultimoAviso[tipo] = ahora; showToast(okMsg); return; }
+  if (DEMO && !SALA) { ultimoAviso[tipo] = ahora; showToast(okMsg); return; }
   if (!myUid) return;
   ultimoAviso[tipo] = ahora;
   try {
-    await addDoc(collection(db, 'restaurantes', uid, 'avisos'), { mesa, tipo, timestamp: serverTimestamp(), cliente: myUid });
+    await addDoc(base('avisos'), { mesa, tipo, timestamp: serverTimestamp(), cliente: myUid });
     showToast(okMsg);
   } catch (e) {
     ultimoAviso[tipo] = 0;

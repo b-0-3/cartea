@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cocina – Cartéa</title>
   <meta name="theme-color" content="#2d5a3d">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <style>
     :root{
@@ -107,6 +108,17 @@
     .t-btn-done:hover{background:var(--green-l);}
 
     /* ── LISTOS: franja fina abajo, se autolimpia sola ── */
+    .avisos-strip{display:none;gap:.6rem;flex-wrap:wrap;padding:.7rem 1.2rem;background:#fff3e0;border-bottom:2px solid var(--rust);flex-shrink:0;}
+    .avisos-strip.show{display:flex;}
+    .aviso-chip{display:flex;align-items:center;gap:.7rem;background:#fff;border:1px solid rgba(194,74,43,.35);border-radius:999px;padding:.45rem .5rem .45rem 1rem;font-weight:700;font-size:1rem;animation:pulso 1.6s ease-in-out infinite;}
+    .aviso-chip small{font-weight:500;color:var(--muted);font-size:.8rem;}
+    .aviso-chip button{background:var(--green);color:#fff;border:none;border-radius:999px;padding:.45rem .9rem;font-weight:700;cursor:pointer;font-size:.85rem;}
+    @keyframes pulso{0%,100%{box-shadow:0 0 0 0 rgba(194,74,43,.0)}50%{box-shadow:0 0 0 6px rgba(194,74,43,.18)}}
+    .demo-qr{position:fixed;right:1.2rem;bottom:4.2rem;background:#fff;border-radius:12px;padding:1rem 1rem .8rem;box-shadow:0 10px 40px rgba(15,14,11,.18);text-align:center;z-index:60;width:210px;}
+    .demo-qr b{display:block;font-size:.95rem;margin-bottom:.15rem;}
+    .demo-qr span{display:block;font-size:.72rem;color:var(--muted);margin-bottom:.6rem;}
+    .demo-qr #demoQrImg{display:flex;justify-content:center;}
+    .demo-qr button{margin-top:.6rem;background:none;border:none;color:var(--muted);font-size:.72rem;cursor:pointer;text-decoration:underline;}
     .done-strip{
       flex-shrink:0;background:#fff;border-top:1px solid var(--border);
       padding:.5rem .9rem;display:flex;align-items:center;gap:.6rem;
@@ -155,6 +167,15 @@
   </div>
 </header>
 
+<div class="avisos-strip" id="avisosStrip"></div>
+
+<div class="demo-qr" id="demoQr" style="display:none">
+  <b>📱 Escanea y pide</b>
+  <span id="demoQrSub">Mesa 1 · demo en directo</span>
+  <div id="demoQrImg"></div>
+  <button id="demoQrHide">Ocultar</button>
+</div>
+
 <div class="conn-error" id="connError">⚠️ Sin conexión con el servidor — los pedidos podrían no actualizarse. Reintentando...</div>
 
 <div class="spotlight-wrap" id="spotlightWrap"></div>
@@ -172,9 +193,21 @@
 <script type="module">
   import { collection, onSnapshot, doc, getDoc, updateDoc, query, where, serverTimestamp }
     from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-  import { db, ensureAuth, escapeHtml, esDeBarra, usaBarra, nombrePantalla, ESTADOS_ACTIVOS, AUTO_COMPLETAR_MIN } from './js/common.js';
+  import { db, ensureAuth, escapeHtml, esDeBarra, usaBarra, nombrePantalla, ESTADOS_ACTIVOS, AUTO_COMPLETAR_MIN, AVISO_LABEL, horaDe,
+           cargarCartaDemo, nombreCartaValido, salaValida } from './js/common.js';
+  import { deleteDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-  const uid = new URLSearchParams(location.search).get('uid');
+  const params = new URLSearchParams(location.search);
+  const uid = params.get('uid');
+  /* DEMO EN DIRECTO (sin cuenta): cocina.html?demo=horizonte
+     Se crea una "sala" nueva y sale un QR: quien lo escanea pide y el pedido llega aquí. */
+  const DEMO_CARTA = !uid && nombreCartaValido(params.get('demo')) ? params.get('demo') : '';
+  let SALA = '';
+  if (DEMO_CARTA) {
+    SALA = salaValida(params.get('sala')) ? params.get('sala') : (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).replace(/[^a-z0-9]/g, '').slice(0, 8);
+    if (params.get('sala') !== SALA) history.replaceState(null, '', location.pathname + '?demo=' + DEMO_CARTA + '&sala=' + SALA);
+  }
+  const BASE = SALA ? ['demos', SALA] : ['restaurantes', uid];
 
   let parada = false;   // si la pantalla se ha parado (cuenta desactivada, enlace malo...), no se pinta nada más
   function pantallaError(msg){
@@ -182,7 +215,7 @@
     document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--cream);flex-direction:column;gap:.8rem;font-family:'DM Sans',sans-serif;color:var(--muted);text-align:center;padding:2rem"><img src="./img/cartea.png" alt="Cartéa" style="height:56px"><div>${msg}</div></div>`;
   }
 
-  if(!uid){
+  if(!uid && !SALA){
     pantallaError('Enlace no válido. Ábrelo desde tu panel (Pantalla de cocina).');
     throw new Error('no uid');
   }
@@ -192,16 +225,33 @@
     throw new Error('auth failed');
   });
 
+  function aplicarResto(){
+    const el = document.getElementById('restoNombre'); if (el) el.textContent = resto.nombre || '';
+    // Locales sin cocina (bares, cachimbas): esta pantalla es la de la BARRA y lo recibe todo.
+    document.querySelectorAll('.lbl-pantalla').forEach(x => x.textContent = nombrePantalla(resto));
+    document.title = nombrePantalla(resto) + ' – Cartéa';
+    renderAvisos();
+    if (!firstLoad) render(new Set());
+  }
+
+  if (SALA) {
+    cargarCartaDemo(DEMO_CARTA).then(c => {
+      resto = c.resto; aplicarResto();
+      const url = location.origin + location.pathname.replace(/[^/]+$/, '') + 'menu.html?demo=' + DEMO_CARTA + '&sala=' + SALA + '&mesa=1';
+      new QRCode(document.getElementById('demoQrImg'), { text: url, width: 170, height: 170, colorDark:'#0f0e0b', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
+      document.getElementById('demoQrImg').title = url;
+      document.getElementById('demoQr').style.display = '';
+      document.getElementById('demoQrHide').addEventListener('click', () => { document.getElementById('demoQr').style.display = 'none'; });
+    }).catch(() => pantallaError('No se encontró esa carta de demo.'));
+  }
+
   authReady.then(()=>{
+    if (SALA) return;
     onSnapshot(doc(db,'restaurantes',uid), snap=>{
       if(!snap.exists()) { pantallaError('Restaurante no encontrado. Abre el enlace desde tu panel.'); return; }
       if(snap.data().activo === false) { pantallaError('Esta cuenta está desactivada temporalmente.'); return; }
       resto = snap.data();
-      const el = document.getElementById('restoNombre'); if (el) el.textContent = resto.nombre || '';
-      // Locales sin cocina (bares, cachimbas): esta pantalla es la de la BARRA y lo recibe todo.
-      document.querySelectorAll('.lbl-pantalla').forEach(x => x.textContent = nombrePantalla(resto));
-      document.title = nombrePantalla(resto) + ' – Cartéa';
-      if (!firstLoad) render(new Set());
+      aplicarResto();
     }, ()=>{});
   });
   setInterval(()=>{const c=document.getElementById('clock'); if(c) c.textContent=new Date().toLocaleTimeString('es-ES');},1000);
@@ -366,13 +416,13 @@
     todosActivos.forEach(p=>{
       const ref = p.listoEn?.seconds || p.timestamp?.seconds || 0;
       if (p.estado==='listo' && ref && ref < limite) {
-        updateDoc(doc(db,'restaurantes',uid,'pedidos',p.id),{estado:'completado'}).catch(()=>{});
+        updateDoc(doc(db,...BASE,'pedidos',p.id),{estado:'completado'}).catch(()=>{});
       }
     });
   }, 60000);
 
   authReady.then(()=>{
-    onSnapshot(query(collection(db,'restaurantes',uid,'pedidos'), where('estado','in',ESTADOS_ACTIVOS)), snap=>{
+    onSnapshot(query(collection(db,...BASE,'pedidos'), where('estado','in',ESTADOS_ACTIVOS)), snap=>{
       hideConnError();
       pedidos=[]; todosActivos=[];
       const currentIds = new Set();
@@ -400,25 +450,47 @@
       pedidos.forEach(p=>{
         if(p.estado==='nuevo' && !autoAdvancing.has(p.id)){
           autoAdvancing.add(p.id);
-          updateDoc(doc(db,'restaurantes',uid,'pedidos',p.id),{estado:'preparando'}).catch(()=>{});
+          updateDoc(doc(db,...BASE,'pedidos',p.id),{estado:'preparando'}).catch(()=>{});
         }
       });
     }, ()=>{ showConnError(); });
   });
 
   function marcarListo(id){
-    return updateDoc(doc(db,'restaurantes',uid,'pedidos',id),{estado:'listo', listoEn: serverTimestamp()})
+    return updateDoc(doc(db,...BASE,'pedidos',id),{estado:'listo', listoEn: serverTimestamp()})
       .catch(()=>{ showConnError(); });
   }
   function retirar(id){
-    return updateDoc(doc(db,'restaurantes',uid,'pedidos',id),{retiradoCocina:true}).catch(()=>{});
+    return updateDoc(doc(db,...BASE,'pedidos',id),{retiradoCocina:true}).catch(()=>{});
   }
+
+  /* ── Avisos de las mesas (carbón, camarero, cuenta) — solo si esta pantalla es la BARRA ── */
+  let avisos = [];
+  let avisosVistos = null;
+  function renderAvisos(){
+    if (parada) return;
+    const strip = document.getElementById('avisosStrip');
+    const ver = resto && resto.pantalla === 'barra' && avisos.length;
+    strip.classList.toggle('show', !!ver);
+    strip.innerHTML = ver ? avisos.map(a => `<div class="aviso-chip">${escapeHtml(AVISO_LABEL[a.tipo] || '🔔 Aviso')} · Mesa ${escapeHtml(a.mesa)} <small>${horaDe(a.timestamp)}</small><button data-aviso-ok="${escapeHtml(a.id)}">✓ Hecho</button></div>`).join('') : '';
+  }
+  authReady.then(()=>{
+    onSnapshot(collection(db,...BASE,'avisos'), snap=>{
+      avisos = snap.docs.map(d=>({ id:d.id, ...d.data() })).sort((a,b)=>(a.timestamp?.seconds||0)-(b.timestamp?.seconds||0));
+      const ids = new Set(avisos.map(a=>a.id));
+      if (avisosVistos && resto && resto.pantalla === 'barra' && avisos.some(a=>!avisosVistos.has(a.id))) beep();
+      avisosVistos = ids;
+      renderAvisos();
+    }, ()=>{});
+  });
 
   document.body.addEventListener('click', e=>{
     const l = e.target.closest('[data-listo]');
     if (l) { marcarListo(l.dataset.listo); return; }
     const r = e.target.closest('[data-retirar]');
-    if (r) retirar(r.dataset.retirar);
+    if (r) { retirar(r.dataset.retirar); return; }
+    const av = e.target.closest('[data-aviso-ok]');
+    if (av) deleteDoc(doc(db,...BASE,'avisos',av.dataset.avisoOk)).catch(()=>{});
   });
 </script>
 </body>

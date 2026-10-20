@@ -118,6 +118,19 @@ Además, cada trabajador tiene su perfil con las notas del jefe y su contrato.
 
 ---
 
+## Enseñar Cartéa a un local (demo sin cuenta)
+
+Antes de crearle nada, enséñale **su propia carta** (hay que tenerla en `cartas/<nombre>.txt`, por ejemplo `horizonte.txt`):
+
+| Enlace | Para qué |
+|---|---|
+| `menu.html?demo=horizonte` | Para mandar por WhatsApp: su carta en el móvil. El pedido se simula. |
+| `cocina.html?demo=horizonte` | **Demo en directo** en el portátil o tablet: pantalla de barra con un QR en la esquina. Quien lo escanea pide desde su móvil y el pedido (y el aviso de carbón) aparece al momento. |
+
+No necesita cuenta ni caduca. Los pedidos de la demo van aparte (`demos/…` en Firestore), sin tocar ningún restaurante. Los enlaces también están en `admin.html` → *Paso 1: demo sin cuenta*.
+
+Al principio de la carta se pueden poner los datos del local para la demo: `@nombre: Horizonte Lounge`, `@carbon: si`, `@pantalla: barra`.
+
 ## Planes, pruebas gratis y panel de administración
 
 Todo se gestiona desde **`admin.html`** (entrando con la cuenta de administrador, **borjatorresalcala@gmail.com**; en tu panel aparece el enlace **🛠️ Clientes (admin)**). No hace falta tocar Firebase.

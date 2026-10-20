@@ -137,5 +137,37 @@ service cloud.firestore {
         allow delete: if isOwner(restId);
       }
     }
+
+    // ── DEMO EN DIRECTO (sin cuenta) ──
+    // Para enseñar Cartéa a un local: la pantalla de barra crea una "sala" con un código al azar
+    // y quien escanea su QR puede hacer pedidos de prueba. No toca ningún restaurante de verdad.
+    match /demos/{sala}/pedidos/{pedidoId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && sala.matches('^[a-z0-9]{4,20}$')
+        && request.resource.data.keys().hasOnly(['mesa','items','total','nota','estado','timestamp','cliente','idioma'])
+        && request.resource.data.estado == 'nuevo'
+        && request.resource.data.cliente == request.auth.uid
+        && mesaValida(request.resource.data.mesa)
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0 && request.resource.data.items.size() <= 60
+        && request.resource.data.total is number && request.resource.data.total >= 0
+        && request.resource.data.nota is string && request.resource.data.nota.size() <= 300
+        && request.resource.data.timestamp == request.time;
+      allow update: if signedIn()
+        && changed().hasOnly(['estado', 'listoEn', 'retiradoCocina'])
+        && request.resource.data.estado in ['nuevo','preparando','listo','completado','cancelado'];
+      allow delete: if false;
+    }
+    match /demos/{sala}/avisos/{avisoId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && sala.matches('^[a-z0-9]{4,20}$')
+        && request.resource.data.keys().hasOnly(['mesa','tipo','timestamp','cliente'])
+        && request.resource.data.tipo in ['camarero', 'cuenta', 'carbon']
+        && mesaValida(request.resource.data.mesa)
+        && request.resource.data.cliente == request.auth.uid
+        && request.resource.data.timestamp == request.time;
+      allow update: if false;
+      allow delete: if signedIn();
+    }
   }
 }
