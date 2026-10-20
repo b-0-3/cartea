@@ -94,7 +94,44 @@ export const ESTADO_LABEL = {
 export const LIMITE_MESAS_BASICO = 5;
 export const LIMITE_MESAS_PRO = 200;
 export const EMAIL_CONTACTO = 'hola@mesaqr.com';
-export function isPro(resto) { return !!resto && resto.plan === 'pro'; }
+/* ── Prueba gratis (la das tú desde admin.html) ──
+   plan = 'prueba' + pruebaHasta = 'AAAA-MM-DD' → funciona como Pro hasta ese
+   día incluido. Al día siguiente el panel pide pasar por caja. */
+export const ADMIN_EMAIL = 'tborjaesponja@gmail.com';
+export function finPrueba(resto) {
+  if (!resto || resto.plan !== 'prueba' || !resto.pruebaHasta) return null;
+  const d = new Date(resto.pruebaHasta + 'T23:59:59');
+  return isNaN(d) ? null : d;
+}
+export function enPrueba(resto) { const f = finPrueba(resto); return !!f && Date.now() <= f.getTime(); }
+export function pruebaCaducada(resto) { const f = finPrueba(resto); return !!f && Date.now() > f.getTime(); }
+// Días que quedan DESPUÉS de hoy (0 = hoy es el último día).
+export function diasPrueba(resto) {
+  const f = finPrueba(resto); if (!f) return 0;
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const fin = new Date(f); fin.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.round((fin - hoy) / 86400000));
+}
+export function textoDiasPrueba(resto) {
+  const d = diasPrueba(resto);
+  return d === 0 ? 'último día' : d === 1 ? 'queda 1 día' : 'quedan ' + d + ' días';
+}
+export function isPro(resto) { return !!resto && (resto.plan === 'pro' || enPrueba(resto)); }
+export function nombrePlan(resto) {
+  if (!resto) return '';
+  if (resto.plan === 'pro') return 'Plan Pro';
+  if (enPrueba(resto)) return 'Prueba Pro · ' + textoDiasPrueba(resto);
+  if (pruebaCaducada(resto)) return 'Prueba terminada';
+  return 'Plan Básico';
+}
+
+/* ── Cobros ──
+   Un pedido solo cuenta como VENTA cuando el camarero lo marca como cobrado. */
+export function cobrado(p) { return !!p && p.pagado === true && p.estado !== 'cancelado'; }
+export function porCobrar(p) { return !!p && p.pagado !== true && p.estado !== 'cancelado'; }
+
+/* ── Tipos de aviso que puede mandar el cliente ── */
+export const AVISO_LABEL = { camarero: '🔔 Llama al camarero', cuenta: '🧾 Pide la cuenta', carbon: '🔥 Cambio de carbón' };
 export function mesasEfectivas(resto) {
   const n = Number(resto?.mesas) || LIMITE_MESAS_BASICO;
   return isPro(resto) ? Math.min(n, LIMITE_MESAS_PRO) : Math.min(n, LIMITE_MESAS_BASICO);

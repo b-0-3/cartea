@@ -7,7 +7,7 @@
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { doc, getDoc, updateDoc, deleteField, collection, onSnapshot, query, where }
   from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { auth, db, isPro, ESTADOS_ACTIVOS } from './common.js';
+import { auth, db, isPro, enPrueba, pruebaCaducada, finPrueba, diasPrueba, textoDiasPrueba, nombrePlan, ADMIN_EMAIL, EMAIL_CONTACTO, ESTADOS_ACTIVOS } from './common.js';
 
 export { auth, db };
 export const baseUrl = location.origin + location.pathname.replace(/[^/]+$/, '');
@@ -109,7 +109,7 @@ function lockScreen(html) {
   const l = document.getElementById('appLoading');
   if (!l) return;
   l.innerHTML =
-    '<img src="./img/carteablanco.png" alt="Cartéa" style="height:52px;display:block;">' +
+    '<img src="./img/cartea.png" alt="Cartéa" style="height:52px;display:block;">' +
     '<div style="color:var(--muted);font-size:.9rem;margin-top:1rem;text-align:center;max-width:320px;line-height:1.6;">' + html + '</div>' +
     '<button id="logoutFromLock" style="margin-top:1.2rem;background:var(--green);color:#fff;border:none;padding:.6rem 1.4rem;border-radius:4px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:.85rem;font-weight:600;">Cerrar sesión</button>';
   const lb = document.getElementById('logoutFromLock');
@@ -166,17 +166,44 @@ export function initPanel() {
         return;
       }
 
+      // Mes de prueba terminado: hay que pasar por caja para seguir usando el panel.
+      // (La carta de los clientes sigue funcionando para no dejarles tirados en pleno servicio.)
+      if (pruebaCaducada(restoData)) {
+        const fin = finPrueba(restoData).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+        const asunto = encodeURIComponent('Quiero seguir con Cartéa – ' + (restoData.nombre || ''));
+        lockScreen('Tu mes de prueba de Cartéa terminó el <b>' + fin + '</b>.<br>¡Gracias por probarlo! Para seguir usándolo, escríbenos y te lo activamos en el día.' +
+          '<br><a href="mailto:' + EMAIL_CONTACTO + '?subject=' + asunto + '" style="display:inline-block;margin-top:1rem;background:var(--gold);color:#0f0e0b;padding:.6rem 1.2rem;border-radius:4px;font-weight:700;text-decoration:none">Quiero seguir →</a>');
+        return;
+      }
+
       const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
       setText('sidebarNombre', restoData.nombre);
       setText('sbPersona', restoData.persona || restoData.nombre);
       const initials = (restoData.persona || restoData.nombre || 'X').trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
       setText('sbAvatar', initials);
       const roleEl = document.querySelector('.sb-user-role');
-      if (roleEl) roleEl.innerHTML = 'Administrador · ' + (isPro(restoData) ? '<b style="color:var(--gold-l)">Plan Pro</b>' : 'Plan Básico');
+      if (roleEl) roleEl.innerHTML = 'Administrador · ' + (isPro(restoData) ? '<b style="color:var(--gold-l)">' + nombrePlan(restoData) + '</b>' : nombrePlan(restoData));
+      // Aviso fino arriba durante la prueba
+      if (enPrueba(restoData)) {
+        const main = document.querySelector('.main .page');
+        if (main && !document.getElementById('bannerPrueba')) {
+          const b = document.createElement('div');
+          b.id = 'bannerPrueba';
+          b.style.cssText = 'background:var(--gold-bg);border:1px solid rgba(200,150,62,.35);border-radius:6px;padding:.6rem .9rem;margin-bottom:1rem;font-size:.8rem;line-height:1.5';
+          b.innerHTML = '⭐ Estás probando <b>Cartéa Pro gratis</b>: <b>' + (diasPrueba(restoData) === 0 ? 'hoy es el último día' : 'te ' + textoDiasPrueba(restoData)) + '</b> (hasta el ' + finPrueba(restoData).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' }) + ').';
+          main.prepend(b);
+        }
+      }
+
       const pageName = document.title.split('–').pop().trim();
       document.title = 'Cartéa – ' + (pageName && pageName !== 'Cartéa' ? pageName : restoData.nombre);
 
       renderNav(restoData);
+      // Enlace al panel de administración solo para ti
+      if (user.email === ADMIN_EMAIL) {
+        const nav = document.getElementById('sbNav');
+        if (nav && !document.getElementById('navAdmin')) nav.insertAdjacentHTML('beforeend', '<div class="sb-section">Cartéa</div><a class="sb-item" id="navAdmin" href="admin.html"><span class="sb-icon">🛠️</span>Clientes (admin)</a>');
+      }
 
       const loader = document.getElementById('appLoading');
       if (loader) { loader.classList.add('hide'); setTimeout(() => loader.remove(), 400); }
