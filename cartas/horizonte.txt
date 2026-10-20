@@ -1,0 +1,96 @@
+# Cócteles
+Mojito 8 | Clásico o con fruta de temporada
+Piña colada 8 | Con ron blanco
+San Francisco 8 | Zumos con un toque de vodka
+Daiquiri Frozen 8
+> Sabor: Clásico, Mango, Maracuyá, Piña
+Blue Love 8 | Con tequila
+
+# Shishas
+Shisha Rubio 14 | Tabaco rubio. Elige tu sabor
+> Sabor: Fight (menta), Bono (Kinder Bueno), Bloody Punch (pomelo), Miss Jossy (galletas de mantequilla), Iz Kaktuz (cactus helado), Blue Yellow (melón y arándanos), Love 66 (6 frutas y mango), Lio (limón), TikiTaka (piña y mango), Euphoria (melón), BumBum (chicle y fresa), Huracán (frambuesa), BlackNana (uva), Kafayayo (coco), Temptation (frambuesa y lima), Big Boy (sandía helada), White Cake (tarta de queso), Lemenciaga (esencia de limón)
+Shisha Full Black 18 | Tabaco negro, más intenso. Elige tu sabor
+> Sabor: Revoshi (limón), Dozaj Max (mango), Dozaj (piña), Blackburn (guayaba), Anda (batido de menta), Pink Man (fresa y pomelo)
+Shisha Fusión 16 | Mezcla de rubio y negro. Elige tu sabor
+> Sabor: Fight (menta), Bono (Kinder Bueno), Bloody Punch (pomelo), Miss Jossy (galletas de mantequilla), Iz Kaktuz (cactus helado), Blue Yellow (melón y arándanos), Love 66 (6 frutas y mango), Lio (limón), TikiTaka (piña y mango), Euphoria (melón), BumBum (chicle y fresa), Huracán (frambuesa), BlackNana (uva), Kafayayo (coco), Temptation (frambuesa y lima), Big Boy (sandía helada), White Cake (tarta de queso), Lemenciaga (esencia de limón), Revoshi (limón), Dozaj Max (mango), Dozaj (piña), Blackburn (guayaba), Anda (batido de menta), Pink Man (fresa y pomelo)
+
+# Snacks
+Pizza 7,50
+> Tipo: Barbacoa, 4 quesos, Boloñesa
+Paninis de jamón y queso 7,50 | 2 unidades
+Chicken fingers 8
+Patatas bravas 7,50
+Croquetas 7,50 | 6 unidades
+Gofre clásico 4
+Gofre con helado 5
+Volcán de chocolate 5 | Relleno de chocolate
+
+# Combinados
+Ron Brugal Añejo 8
+Ron Barceló 8
+Ron Cacique 8
+Ron Santa Teresa 8
+Ron Havana 7 9
+Ron Legendario 9
+Ron Zacapa 12
+Ginebra Bombay Sapphire 8
+Ginebra Larios 12 8
+Ginebra Puerto de Indias 8
+Ginebra Seagram's 8
+Ginebra Beefeater 8
+Ginebra Larios Rosé 8
+Ginebra Tanqueray 8
+Ginebra Tanqueray 0.0 7,50
+Ginebra Nordés 12
+Ginebra Bulldog 12
+Vodka Stolichnaya 7,50
+Vodka Cîroc 9
+Vodka Grey Goose 13
+Whisky Ballantine's 8
+Whisky Black Label 10
+Whisky Cardhu 10
+Whisky Chivas 10
+Whisky J&B 10
+Suplemento Red Bull 1 | Para tu combinado
+
+# Licores
+Chupito de mango y fresa 2
+Baileys 5
+Malibú 7
+Licor 43 8
+
+# Cervezas
+Doble de cerveza 3
+Estrella Galicia 3,20
+Radler 3,20
+1906 3,80
+Corona 4
+Tostada 0,0 4
+Jarra de Estrella Galicia 4
+
+# Vinos
+Tinto de verano doble 3
+Jarra de tinto de verano 4
+Salitos 4
+Alma (copa) 4
+Rueda Viñalena (copa) 4
+Ribera del Duero (copa) 4
+Rueda Viñalena verdejo (botella) 18
+Ribera del Duero tinto (botella) 18
+Alma (botella) 20
+
+# Otras bebidas
+Agua 2,80
+Refresco 3
+Zumo 3,50
+> Sabor: Piña, Melocotón, Naranja, Tropical
+Lipton 3,50
+Red Bull 4
+Café cortado 1,50
+Café con leche 2
+Cola Cao 2,50
+Café bombón 3
+Infusión 3
+Café con Baileys 5,50
+Batido 6,50
+> Sabor: Oreo, Kinder Bueno, Chocolate, Fresa
