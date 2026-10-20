@@ -53,7 +53,8 @@ function renderNav(resto) {
     const active = current === it.href ? ' active' : '';
     const badge = it.badge ? `<span class="sb-badge" id="${it.badge}" style="display:none">0</span>` : '';
     const proTag = it.pro && resto && !pro ? '<span class="sb-pro">PRO</span>' : '';
-    return `<a class="sb-item${active}" href="${it.href}"><span class="sb-icon">${it.icon}</span>${it.label}${badge}${proTag}</a>`;
+    const label = it.href === 'panel-cocina.html' && resto && resto.pantalla === 'barra' ? 'Pantalla de barra' : it.label;
+    return `<a class="sb-item${active}" href="${it.href}"><span class="sb-icon">${it.icon}</span>${label}${badge}${proTag}</a>`;
   }).join('');
 }
 renderNav(null); // se pinta ya, sin esperar a Firebase
@@ -162,7 +163,7 @@ export function initPanel() {
 
       // Cuenta desactivada (p. ej. pago pendiente): bloquea el acceso al panel.
       if (restoData.activo === false) {
-        lockScreen('Tu cuenta está desactivada temporalmente.<br>Escríbenos a <a href="mailto:hola@mesaqr.com" style="color:var(--green)">hola@mesaqr.com</a> para reactivarla.');
+        lockScreen('Tu cuenta está desactivada temporalmente.<br>Escríbenos a <a href="mailto:borjatorresalcala@gmail.com" style="color:var(--green)">borjatorresalcala@gmail.com</a> para reactivarla.');
         return;
       }
 

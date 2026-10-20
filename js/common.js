@@ -93,11 +93,11 @@ export const ESTADO_LABEL = {
 /* ── Planes ── */
 export const LIMITE_MESAS_BASICO = 5;
 export const LIMITE_MESAS_PRO = 200;
-export const EMAIL_CONTACTO = 'hola@mesaqr.com';
+export const EMAIL_CONTACTO = 'borjatorresalcala@gmail.com';
 /* ── Prueba gratis (la das tú desde admin.html) ──
    plan = 'prueba' + pruebaHasta = 'AAAA-MM-DD' → funciona como Pro hasta ese
    día incluido. Al día siguiente el panel pide pasar por caja. */
-export const ADMIN_EMAIL = 'tborjaesponja@gmail.com';
+export const ADMIN_EMAIL = 'borjatorresalcala@gmail.com';
 export function finPrueba(resto) {
   if (!resto || resto.plan !== 'prueba' || !resto.pruebaHasta) return null;
   const d = new Date(resto.pruebaHasta + 'T23:59:59');
@@ -183,11 +183,66 @@ export const CAT_EN = {
   'Cócteles':'Cocktails', 'Cafés':'Coffee', 'Menú del día':'Set menu', 'Sopas':'Soups'
 };
 /* Categorías que prepara la barra (no la cocina) */
-export const CATS_BARRA = ['bebida','barra','cóctel','coctel','vino','cerveza','café','cafe','refresco','licor'];
+export const CATS_BARRA = ['bebida','barra','cóctel','coctel','vino','cerveza','café','cafe','refresco','licor','combinado','copa','shisha','cachimba'];
 /* ¿Este restaurante tiene a alguien en barra? Lo mantiene al día el panel
    (Equipo/Resumen). Si no hay barra, las bebidas las saca la cocina como siempre. */
 export function usaBarra(resto) { return !!resto && resto.hayBarra === true; }
 export function esDeBarra(categoria) {
   const c = String(categoria || '').toLowerCase();
   return CATS_BARRA.some(k => c.includes(k));
+}
+
+/* ── Pantalla de pedidos: se llama "Cocina" o "Barra" según el local ── */
+export function nombrePantalla(resto) { return resto && resto.pantalla === 'barra' ? 'Barra' : 'Cocina'; }
+
+/* ── Opciones de un producto (el cliente elige una: sabor, tipo...) ── */
+export function opcionesDe(item) {
+  const o = item && item.opciones;
+  return o && Array.isArray(o.valores) && o.valores.length ? { titulo: String(o.titulo || 'Elige'), valores: o.valores.map(String) } : null;
+}
+
+/* ── Pegar carta entera ──
+   "Croquetas 8,50" · "Bravas ....... 6 €" · "Gambas 11,50 | descripción" · "# Categoría"
+   "> Sabor: Menta, Uva, Melón" → el cliente elige uno al pedir el producto de la línea anterior */
+const EMOJI_CAT = [
+  [/shisha|cachimba/i, '💨'], [/c[oó]ctel|mojito|daiquiri|colada/i, '🍹'], [/combinado|ron |ginebra|vodka|whisk|licor|chupito/i, '🥃'],
+  [/batido/i, '🥤'], [/bebida|refresco|agua|zumo/i, '🥤'], [/vino|tinto/i, '🍷'], [/cerveza/i, '🍺'], [/copa/i, '🍸'], [/caf[eé]|infusi|colacao/i, '☕'],
+  [/gofre|volcano|postre|dulce/i, '🍰'], [/snack|patata|fingers|croqueta/i, '🍟'], [/ensalada/i, '🥗'], [/pizza/i, '🍕'], [/panini|bocadillo|sandwich/i, '🥪'],
+  [/pasta/i, '🍝'], [/arroz|paella/i, '🥘'], [/carne/i, '🥩'], [/pescado|marisco/i, '🐟'], [/hamburguesa/i, '🍔'], [/tapa|picar|entrante|raci/i, '🍤'],
+];
+export function emojiPara(texto) { return (EMOJI_CAT.find(([re]) => re.test(texto)) || [null, '🍽️'])[1]; }
+
+export function parsearCarta(texto, catsActuales = []) {
+  let cat = catsActuales[0] || 'Principales';
+  const platos = [], fallos = [], catsNuevas = [], catsVistas = [];
+  String(texto || '').split(/\r?\n/).forEach(linea => {
+    const l = linea.trim();
+    if (!l) return;
+    if (l.startsWith('>')) {                       // opciones del plato anterior
+      const ultimo = platos[platos.length - 1];
+      const cuerpo = l.slice(1).trim();
+      const i = cuerpo.indexOf(':');
+      const titulo = (i > 0 ? cuerpo.slice(0, i) : 'Elige').trim().slice(0, 40) || 'Elige';
+      const valores = [...new Set((i > 0 ? cuerpo.slice(i + 1) : cuerpo).split(/[,;]/).map(v => v.trim().slice(0, 60)).filter(Boolean))].slice(0, 60);
+      if (!ultimo || !valores.length) { fallos.push(l); return; }
+      ultimo.opciones = { titulo, valores };
+      return;
+    }
+    if (l.startsWith('#') || (/:$/.test(l) && !/\d/.test(l))) {
+      cat = l.replace(/^#+/, '').replace(/:$/, '').trim() || cat;
+      if (!catsVistas.includes(cat)) catsVistas.push(cat);
+      if (!catsActuales.includes(cat) && !catsNuevas.includes(cat)) catsNuevas.push(cat);
+      return;
+    }
+    const [principal, ...resto] = l.split('|');
+    const desc = resto.join('|').trim();
+    const m = principal.trim().match(/^(.+?)[\s.…·:;\-–—]*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|eur|euros)?$/i);
+    if (!m) { fallos.push(l); return; }
+    const nombre = m[1].trim().replace(/[\s.…·:;\-–—]+$/, '');
+    const precio = Math.round(parseFloat(m[2].replace(',', '.')) * 100) / 100;
+    if (!nombre || isNaN(precio)) { fallos.push(l); return; }
+    if (!catsVistas.includes(cat)) catsVistas.push(cat);
+    platos.push({ nombre: nombre.slice(0, 80), precio, desc: desc.slice(0, 200), categoria: cat, emoji: emojiPara(cat + ' ' + nombre), activo: true, alergenos: [], orden: platos.length });
+  });
+  return { platos, fallos, catsNuevas, catsVistas };
 }
