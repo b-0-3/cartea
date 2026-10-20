@@ -1,3 +1,7 @@
+@nombre: Horizonte Lounge
+@carbon: si
+@pantalla: barra
+
 # Cócteles
 Mojito 8 | Clásico o con fruta de temporada
 Piña colada 8 | Con ron blanco
