@@ -17,6 +17,10 @@
     .cred{background:var(--ink);color:#fff;border-radius:6px;padding:1rem 1.2rem;font-family:monospace;font-size:.85rem;line-height:1.8;white-space:pre-wrap;word-break:break-all;}
     .acts{display:flex;gap:.3rem;flex-wrap:wrap;}
     .tag-off{color:var(--rust);font-weight:700;}
+    .links{display:flex;flex-direction:column;gap:.5rem;margin-top:.6rem;}
+    .links a{display:block;background:var(--cream);border:1px solid var(--border);border-radius:6px;padding:.6rem .8rem;color:var(--ink);text-decoration:none;font-size:.82rem;}
+    .links a b{display:block;}
+    .links a span{color:var(--muted);font-size:.7rem;word-break:break-all;}
   </style>
 </head>
 <body>
@@ -60,6 +64,12 @@
               <label style="margin:0;">🔥 Botón "Cambiar carbón" (cachimbas)</label>
               <label class="toggle"><input type="checkbox" id="aCarbon"/><span class="slider"></span></label>
             </div>
+            <div class="form-row">
+              <div class="field"><label>Pantalla de pedidos</label>
+                <select id="aPantalla"><option value="cocina">🍳 Cocina</option><option value="barra">🍸 Barra (sin cocina)</option></select></div>
+              <div class="field"><label>Carta inicial</label>
+                <select id="aCarta"><option value="">Vacía</option><option value="horizonte">Horizonte (cachimbas)</option></select></div>
+            </div>
             <div class="error" id="aError"></div>
             <button class="btn-primary" id="aCrear" style="width:100%;justify-content:center;">Crear cuenta de prueba →</button>
             <div id="aResultado" style="margin-top:1rem"></div>
@@ -73,9 +83,15 @@
             <p>• Las cuentas de <b>prueba</b> las creas tú aquí: tienen todo lo de Pro hasta la fecha que pongas.</p>
             <p>• Al acabar la prueba, su panel muestra "Tu prueba ha terminado" con un botón para escribirte. La carta de sus clientes <b>sigue funcionando</b>, para no dejarles tirados en pleno servicio.</p>
             <p>• Cuando te paguen: pulsa <b>Pro</b> en su fila. Si no pagan: <b>Desactivar</b> (deja de funcionar todo).</p>
+            <p>• <b>🔗 Demo</b> te da los enlaces para enseñarlo: la carta (móvil) y la pantalla de pedidos (portátil o tablet). <b>📋 Carta</b> carga una carta preparada.</p>
             <p style="color:var(--muted);font-size:.78rem">No hay cobros dentro de la web: el pago lo gestionas tú aparte (Bizum, transferencia…).</p>
           </div>
         </div>
+      </div>
+
+      <div class="card" id="linksCard" style="display:none">
+        <div class="card-hd"><div><div class="card-title" id="linksTitle">Enlaces para la demo</div><div class="card-sub">Ábrelos en distintos aparatos: la carta en el móvil y la pantalla en el portátil o la tablet</div></div></div>
+        <div class="card-body"><div class="links" id="linksBox"></div></div>
       </div>
 
       <div class="card">
@@ -95,8 +111,8 @@
 <script type="module">
 import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth as getAuthFor, onAuthStateChanged, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { getFirestore as getFsFor, collection, getDocs, doc, setDoc, updateDoc, deleteField } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { FB_CONFIG, auth, db, escapeHtml, nombrePlan, ADMIN_EMAIL } from './js/common.js';
+import { getFirestore as getFsFor, collection, getDocs, doc, setDoc, updateDoc, deleteField, writeBatch } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { FB_CONFIG, auth, db, escapeHtml, nombrePlan, nombrePantalla, parsearCarta, ADMIN_EMAIL } from './js/common.js';
 
 function toast(msg, type) {
   const t = document.getElementById('toast');
@@ -114,6 +130,42 @@ function passAleatoria() {
 }
 document.getElementById('aPass').value = passAleatoria();
 
+const WEB = location.origin + location.pathname.replace(/[^/]+$/, '');
+
+/* Cartas ya preparadas (archivos en la carpeta cartas/) */
+async function leerCarta(nombre) {
+  const r = await fetch('cartas/' + encodeURIComponent(nombre) + '.txt', { cache: 'no-store' });
+  if (!r.ok) throw new Error('No encuentro la carta "' + nombre + '"');
+  const { platos, catsVistas } = parsearCarta(await r.text(), []);
+  if (!platos.length) throw new Error('La carta "' + nombre + '" está vacía');
+  return { platos, cats: catsVistas };
+}
+async function guardarCarta(base, restId, platos) {
+  for (let k = 0; k < platos.length; k += 400) {
+    const b = writeBatch(base);
+    platos.slice(k, k + 400).forEach(p => b.set(doc(collection(base, 'restaurantes', restId, 'menu')), p));
+    await b.commit();
+  }
+}
+
+/* Enlaces para enseñar la demo */
+function mostrarEnlaces(r) {
+  const id = r.id || r.uid;
+  const pant = nombrePantalla(r);
+  const L = [
+    ['📱 Carta del cliente (mesa 1)', WEB + 'menu.html?uid=' + id + '&mesa=1'],
+    ['📱 Carta del cliente (mesa 2)', WEB + 'menu.html?uid=' + id + '&mesa=2'],
+    ['🖥️ Pantalla de ' + pant.toLowerCase(), WEB + 'cocina.html?uid=' + id],
+    ['👤 App del equipo (con PIN)', WEB + 'trabajador.html?uid=' + id],
+  ];
+  document.getElementById('linksTitle').textContent = 'Enlaces para la demo · ' + (r.nombre || '');
+  document.getElementById('linksBox').innerHTML = L.map(([t, u]) =>
+    `<a href="${escapeHtml(u)}" target="_blank" rel="noopener"><b>${escapeHtml(t)}</b><span>${escapeHtml(u)}</span></a>`).join('');
+  const card = document.getElementById('linksCard');
+  card.style.display = '';
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 let restos = [];
 async function cargar() {
   const snap = await getDocs(collection(db, 'restaurantes'));
@@ -127,6 +179,8 @@ async function cargar() {
       <td>${Number(r.mesas) || '–'}</td>
       <td style="font-size:.75rem;color:var(--muted)">${r.creadoEn ? new Date(r.creadoEn).toLocaleDateString('es-ES') : '–'}</td>
       <td><div class="acts">
+        <button class="btn-sm btn-ghost" data-a="enlaces" data-id="${escapeHtml(r.id)}">🔗 Demo</button>
+        <button class="btn-sm btn-ghost" data-a="carta" data-id="${escapeHtml(r.id)}">📋 Carta</button>
         <button class="btn-sm btn-gold-sm" data-a="prueba" data-id="${escapeHtml(r.id)}">🎁 Prueba</button>
         <button class="btn-sm btn-success-sm" data-a="pro" data-id="${escapeHtml(r.id)}">⭐ Pro</button>
         <button class="btn-sm btn-ghost" data-a="basico" data-id="${escapeHtml(r.id)}">Básico</button>
@@ -139,8 +193,17 @@ document.getElementById('lista').addEventListener('click', async (e) => {
   const b = e.target.closest('[data-a]'); if (!b) return;
   const r = restos.find(x => x.id === b.dataset.id); if (!r) return;
   const ref = doc(db, 'restaurantes', r.id);
+  if (b.dataset.a === 'enlaces') { mostrarEnlaces(r); return; }
   try {
-    if (b.dataset.a === 'prueba') {
+    if (b.dataset.a === 'carta') {
+      const nombre = prompt(`¿Qué carta cargo en "${r.nombre}"? (nombre del archivo de la carpeta cartas/)`, 'horizonte');
+      if (!nombre) return;
+      const { platos, cats } = await leerCarta(nombre.trim().toLowerCase());
+      if (!confirm(`Se AÑADIRÁN ${platos.length} productos a la carta de "${r.nombre}". ¿Seguimos?`)) return;
+      await guardarCarta(db, r.id, platos);
+      const todas = [...new Set([...(Array.isArray(r.cats) ? r.cats : []), ...cats])];
+      await updateDoc(ref, { cats: todas });
+    } else if (b.dataset.a === 'prueba') {
       const dias = prompt(`¿Cuántos días de prueba para "${r.nombre}" a partir de hoy?`, '30');
       if (!dias || isNaN(+dias)) return;
       await updateDoc(ref, { plan: 'prueba', pruebaHasta: hoyMas(+dias) });
@@ -170,26 +233,33 @@ document.getElementById('aCrear').addEventListener('click', async () => {
   const dias = Math.max(1, parseInt(document.getElementById('aDias').value, 10) || 30);
   const mesas = Math.min(200, Math.max(1, parseInt(document.getElementById('aMesas').value, 10) || 10));
   const carbon = document.getElementById('aCarbon').checked;
+  const pantalla = document.getElementById('aPantalla').value === 'barra' ? 'barra' : 'cocina';
+  const cartaNombre = document.getElementById('aCarta').value;
   const err = document.getElementById('aError');
   err.classList.remove('show');
   if (!nombre || !email || pass.length < 6) { err.textContent = 'Rellena nombre, email y una contraseña de 6 caracteres o más'; err.classList.add('show'); return; }
 
   const btn = document.getElementById('aCrear');
   btn.disabled = true; btn.textContent = 'Creando…';
+  let carta = null;
+  try { if (cartaNombre) carta = await leerCarta(cartaNombre); }
+  catch (e) { err.textContent = e.message; err.classList.add('show'); btn.disabled = false; btn.textContent = 'Crear cuenta de prueba →'; return; }
   const sec = initializeApp(FB_CONFIG, 'alta-' + Date.now());
   try {
     const secAuth = getAuthFor(sec);
+    const secDb = getFsFor(sec);
     const cred = await createUserWithEmailAndPassword(secAuth, email, pass);
     const nuevoId = cred.user.uid;
-    await setDoc(doc(getFsFor(sec), 'restaurantes', nuevoId), {
+    await setDoc(doc(secDb, 'restaurantes', nuevoId), {
       nombre, persona, mesas: 5, plan: 'basico',
-      cats: ['Entrantes', 'Principales', 'Postres', 'Bebidas'],
+      cats: carta ? carta.cats : ['Entrantes', 'Principales', 'Postres', 'Bebidas'],
       creadoEn: new Date().toISOString(), uid: nuevoId
     });
+    if (carta) await guardarCarta(secDb, nuevoId, carta.platos);   // se escribe como si fuera el propio local
     await signOut(secAuth);
     const hasta = hoyMas(dias);
-    await updateDoc(doc(db, 'restaurantes', nuevoId), { plan: 'prueba', pruebaHasta: hasta, mesas, avisoCarbon: carbon });
-    const web = location.origin + location.pathname.replace(/[^/]+$/, '');
+    await updateDoc(doc(db, 'restaurantes', nuevoId), { plan: 'prueba', pruebaHasta: hasta, mesas, avisoCarbon: carbon, pantalla });
+    const web = WEB;
     const texto = `Web: ${web}\nEmail: ${email}\nContraseña: ${pass}\nPrueba gratis hasta: ${fechaBonita(hasta)}`;
     document.getElementById('aResultado').innerHTML = `
       <div style="font-size:.8rem;font-weight:700;margin-bottom:.4rem">✓ Cuenta creada. Pásale esto a ${escapeHtml(nombre)}:</div>
@@ -200,6 +270,8 @@ document.getElementById('aCrear').addEventListener('click', async () => {
     });
     ['aNombre', 'aPersona', 'aEmail'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('aPass').value = passAleatoria();
+    mostrarEnlaces({ id: nuevoId, nombre, pantalla });
+    document.getElementById('aResultado').scrollIntoView({ behavior: 'smooth', block: 'center' });
     cargar();
   } catch (e) {
     console.error(e);

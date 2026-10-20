@@ -136,7 +136,7 @@
 <body>
 
 <div class="audio-gate" id="audioGate">
-  <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--gold-l);">Cartéa · Cocina</div>
+  <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--gold-l);">Cartéa · <span class="lbl-pantalla">Cocina</span></div>
   <p>Activa el aviso sonoro para que suene cada vez que entre un pedido nuevo, sin tener que mirar la pantalla.</p>
   <button id="enableSoundBtn">🔔 Activar sonido y empezar</button>
 </div>
@@ -145,7 +145,7 @@
   <div class="h-left">
     <img src="./img/carteablanco.png" alt="Cartéa" style="height:32px;display:block;">
     <div class="h-sep"></div>
-    <div class="h-badge">Cocina</div>
+    <div class="h-badge lbl-pantalla">Cocina</div>
     <div class="h-name" id="restoNombre"></div>
   </div>
   <div class="h-right">
@@ -161,7 +161,7 @@
 
 <main>
   <div class="queue-label" id="queueLabel" style="display:none;">Después, por orden de llegada</div>
-  <div class="cocina-grid" id="colCocina"><div class="empty-main">Sin pedidos en cocina</div></div>
+  <div class="cocina-grid" id="colCocina"><div class="empty-main">Sin pedidos pendientes</div></div>
 </main>
 
 <div class="done-strip" id="doneStrip">
@@ -172,7 +172,7 @@
 <script type="module">
   import { collection, onSnapshot, doc, getDoc, updateDoc, query, where, serverTimestamp }
     from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-  import { db, ensureAuth, escapeHtml, esDeBarra, usaBarra, ESTADOS_ACTIVOS, AUTO_COMPLETAR_MIN } from './js/common.js';
+  import { db, ensureAuth, escapeHtml, esDeBarra, usaBarra, nombrePantalla, ESTADOS_ACTIVOS, AUTO_COMPLETAR_MIN } from './js/common.js';
 
   const uid = new URLSearchParams(location.search).get('uid');
 
@@ -198,6 +198,10 @@
       if(snap.data().activo === false) { pantallaError('Esta cuenta está desactivada temporalmente.'); return; }
       resto = snap.data();
       const el = document.getElementById('restoNombre'); if (el) el.textContent = resto.nombre || '';
+      // Locales sin cocina (bares, cachimbas): esta pantalla es la de la BARRA y lo recibe todo.
+      document.querySelectorAll('.lbl-pantalla').forEach(x => x.textContent = nombrePantalla(resto));
+      document.title = nombrePantalla(resto) + ' – Cartéa';
+      if (!firstLoad) render(new Set());
     }, ()=>{});
   });
   setInterval(()=>{const c=document.getElementById('clock'); if(c) c.textContent=new Date().toLocaleTimeString('es-ES');},1000);
@@ -258,8 +262,10 @@
   function elapsed(ts){if(!ts)return{str:'0:00',mins:0};const s=Math.max(0,Math.floor((Date.now()-ts.seconds*1000)/1000));return{str:`${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`,mins:Math.floor(s/60)};}
   const timerCls=m=>m>10?'t-hot':m>5?'t-warn':'t-ok';
 
+  // ¿Lo que es solo de barra lo lleva otra persona (rol Barra en el móvil)? Si esta pantalla ES la barra, no.
+  const filtraBarra = () => usaBarra(resto) && !(resto && resto.pantalla === 'barra');
   function chips(p){
-    return (p.items||[]).map(i=>`<span class="i-chip${usaBarra(resto) && esDeBarra(i.categoria)?' bebida':''}"><b>${Number(i.qty)||0}×</b>${escapeHtml(i.nombre)}</span>`).join('');
+    return (p.items||[]).map(i=>`<span class="i-chip${filtraBarra() && esDeBarra(i.categoria)?' bebida':''}"><b>${Number(i.qty)||0}×</b>${escapeHtml(i.nombre)}</span>`).join('');
   }
 
   function renderSpotlight(p){
@@ -307,9 +313,9 @@
     document.getElementById('queueLabel').style.display = resto.length ? '' : 'none';
     document.getElementById('colCocina').innerHTML = resto.length
       ? resto.map(p=>renderTicket(p, nuevoIds.has(p.id))).join('')
-      : (next ? '' : '<div class="empty-main">Sin pedidos en cocina</div>');
+      : (next ? '' : '<div class="empty-main">Sin pedidos pendientes</div>');
 
-    document.getElementById('hCount').textContent = enCocina.length + ' en cocina';
+    document.getElementById('hCount').textContent = enCocina.length + ' pendiente' + (enCocina.length === 1 ? '' : 's');
 
     const doneEmpty = document.getElementById('doneEmpty');
     const strip = document.getElementById('doneStrip');
@@ -373,7 +379,7 @@
       snap.forEach(d=>{
         const p={id:d.id,...d.data()};
         todosActivos.push(p);
-        if (usaBarra(resto) && !(p.items||[]).some(i=>!esDeBarra(i.categoria))) return;   // solo bebidas y hay barra → lo lleva la barra
+        if (filtraBarra() && !(p.items||[]).some(i=>!esDeBarra(i.categoria))) return;   // solo bebidas y hay barra → lo lleva la barra
         currentIds.add(p.id);
         pedidos.push(p);
       });

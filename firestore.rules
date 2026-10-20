@@ -25,7 +25,7 @@ service cloud.firestore {
     function mesaValida(m) { return m is string && m.matches('^[0-9]{1,4}$'); }
     // Tú (el dueño de Cartéa): puedes ver todos los restaurantes y cambiarles el plan.
     function isAdmin() {
-      return conEmail() && request.auth.token.email == 'tborjaesponja@gmail.com';
+      return conEmail() && request.auth.token.email == 'borjatorresalcala@gmail.com';
     }
 
     match /restaurantes/{restId} {
@@ -59,7 +59,7 @@ service cloud.firestore {
       // ── Carta ──
       match /menu/{itemId} {
         allow read: if signedIn();
-        allow write: if isOwner(restId);
+        allow write: if isOwner(restId) || isAdmin();   // tú puedes cargarle una carta preparada
       }
 
       // ── Pedidos ──

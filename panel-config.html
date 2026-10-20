@@ -72,7 +72,7 @@
           <div class="card-body">
             <div class="field"><label>Nombre del restaurante</label><input type="text" id="cfgNombre" maxlength="60" placeholder="Nombre visible para los clientes"/></div>
             <div class="field"><label>Tu nombre</label><input type="text" id="cfgPersona" maxlength="60" placeholder="Tu nombre"/></div>
-            <div class="field"><label>Email de la cuenta</label><input type="email" id="cfgEmail" disabled style="opacity:.5;cursor:not-allowed;"/><div class="form-hint">Para cambiarlo, escríbenos a hola@mesaqr.com.</div></div>
+            <div class="field"><label>Email de la cuenta</label><input type="email" id="cfgEmail" disabled style="opacity:.5;cursor:not-allowed;"/><div class="form-hint">Para cambiarlo, escríbenos a borjatorresalcala@gmail.com.</div></div>
             <button class="btn-primary" id="saveConfigBtn" style="width:100%;justify-content:center;">Guardar cambios →</button>
           </div>
         </div>
@@ -84,6 +84,14 @@
             <div class="field" style="display:flex;align-items:center;justify-content:space-between;margin:0;">
               <div><label style="margin:0;">🔥 Cambiar carbón</label><div class="form-hint" style="margin-top:.1rem;">Para locales de cachimbas</div></div>
               <label class="toggle"><input type="checkbox" id="cfgCarbon"/><span class="slider"></span></label>
+            </div>
+            <div class="field" style="margin:1rem 0 0;">
+              <label>¿Quién prepara los pedidos en la pantalla?</label>
+              <select id="cfgPantalla">
+                <option value="cocina">🍳 Cocina (restaurante normal)</option>
+                <option value="barra">🍸 Barra (no hay cocina: bares, cachimbas…)</option>
+              </select>
+              <div class="form-hint">Solo cambia el nombre de la pantalla de pared. Con "Barra", esa pantalla recibe todos los pedidos.</div>
             </div>
           </div>
         </div>
@@ -131,7 +139,7 @@
               <p>Borra <b>todo el historial de pedidos</b> (también las ventas) y los avisos pendientes. No se puede deshacer. Si solo quieres empezar el día, no hace falta: las cifras de "hoy" se reinician solas a las 5:00.</p>
               <button class="btn-sm btn-danger-sm" id="clearHistBtn" style="padding:.5rem 1rem;font-size:.8rem;">🗑 Borrar historial de pedidos</button>
             </div>
-            <p style="font-size:.75rem;color:var(--muted);margin-top:.9rem;line-height:1.6;">¿Quieres darte de baja y borrar tu cuenta? Escríbenos a <a href="mailto:hola@mesaqr.com" style="color:var(--green)">hola@mesaqr.com</a> desde el email de la cuenta.</p>
+            <p style="font-size:.75rem;color:var(--muted);margin-top:.9rem;line-height:1.6;">¿Quieres darte de baja y borrar tu cuenta? Escríbenos a <a href="mailto:borjatorresalcala@gmail.com" style="color:var(--green)">borjatorresalcala@gmail.com</a> desde el email de la cuenta.</p>
           </div>
         </div>
       </div>
@@ -190,9 +198,9 @@ function renderPlan() {
     <div class="card-hd"><div class="card-title">Tu plan</div><span class="plan-pill ${pro?'pro':''}">${prueba?'Prueba':pro?'Pro':'Básico'}</span></div>
     <div class="card-body" style="font-size:.85rem;line-height:1.7;">
       ${prueba
-        ? `Estás probando <b>Cartéa Pro gratis</b> hasta el <b>${finPrueba(restoData).toLocaleDateString('es-ES',{day:'numeric',month:'long'})}</b> (${diasPrueba(restoData)===0?'hoy es el último día':textoDiasPrueba(restoData)}). Tienes todo desbloqueado. Para seguir después, escríbenos a <a href="mailto:hola@mesaqr.com" style="color:var(--green)">hola@mesaqr.com</a>.`
+        ? `Estás probando <b>Cartéa Pro gratis</b> hasta el <b>${finPrueba(restoData).toLocaleDateString('es-ES',{day:'numeric',month:'long'})}</b> (${diasPrueba(restoData)===0?'hoy es el último día':textoDiasPrueba(restoData)}). Tienes todo desbloqueado. Para seguir después, escríbenos a <a href="mailto:borjatorresalcala@gmail.com" style="color:var(--green)">borjatorresalcala@gmail.com</a>.`
         : pro
-        ? `Tienes <b>Cartéa Pro</b>: hasta 200 mesas, página de Ventas y carta en inglés. Para cualquier cambio en tu plan o factura, escríbenos a <a href="mailto:hola@mesaqr.com" style="color:var(--green)">hola@mesaqr.com</a>.`
+        ? `Tienes <b>Cartéa Pro</b>: hasta 200 mesas, página de Ventas y carta en inglés. Para cualquier cambio en tu plan o factura, escríbenos a <a href="mailto:borjatorresalcala@gmail.com" style="color:var(--green)">borjatorresalcala@gmail.com</a>.`
         : `Plan <b>Básico</b> (gratis): hasta ${LIMITE_MESAS_BASICO} mesas, carta, QR, pedidos, cocina y equipo.<br>
            Con <b>Pro (29 €/mes, sin permanencia)</b> además: hasta 200 mesas, página de Ventas con estadísticas y carta en inglés.
            <div style="margin-top:.8rem"><a class="btn-primary" href="${mailtoPro(restoData)}">Pasar a Pro →</a></div>
@@ -223,6 +231,16 @@ initPanel().then(({ uid: u, restoData: rd }) => {
       await updateDoc(doc(db,'restaurantes',uid), { avisoCarbon: carbon.checked });
       showToast(carbon.checked ? 'Botón "Cambiar carbón" activado ✓' : 'Botón "Cambiar carbón" quitado', 'success');
     } catch (e) { carbon.checked = !carbon.checked; showToast('No se pudo guardar', 'error'); }
+  });
+
+  const pantalla = document.getElementById('cfgPantalla');
+  pantalla.value = restoData.pantalla === 'barra' ? 'barra' : 'cocina';
+  pantalla.addEventListener('change', async () => {
+    try {
+      await updateDoc(doc(db,'restaurantes',uid), { pantalla: pantalla.value });
+      restoData.pantalla = pantalla.value;
+      showToast('Pantalla de ' + pantalla.value + ' ✓', 'success');
+    } catch (e) { showToast('No se pudo guardar', 'error'); }
   });
 
   document.getElementById('saveConfigBtn').addEventListener('click', async () => {

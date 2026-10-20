@@ -63,12 +63,12 @@
 
     <div class="page-hd">
       <div class="page-eyebrow">Equipo</div>
-      <div class="page-title">Pantalla de cocina</div>
-      <div class="page-sub">Para la tablet o pantalla de la pared de cocina: los pedidos entran solos, con sonido</div>
+      <div class="page-title">Pantalla de <span class="lbl-p">cocina</span></div>
+      <div class="page-sub">Para la tablet o pantalla de la <span class="lbl-p">cocina</span>: los pedidos entran solos, con sonido. ¿No tenéis cocina? En Configuración puedes llamarla "barra".</div>
     </div>
     <div class="grid-2">
       <div class="card">
-        <div class="card-hd"><div class="card-title">Abrir en la tablet de cocina</div></div>
+        <div class="card-hd"><div class="card-title">Abrir en la tablet de <span class="lbl-p">cocina</span></div></div>
         <div class="card-body">
           <div style="display:flex;gap:1.2rem;align-items:center;flex-wrap:wrap;">
             <div id="cocinaQr" style="background:#fff;padding:.6rem;border:1px solid var(--border);border-radius:4px;"></div>
@@ -85,7 +85,7 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-hd"><div class="card-title">Vista previa en tiempo real</div><div class="card-sub">Lo mismo que ve el equipo de cocina</div></div>
+        <div class="card-hd"><div class="card-title">Vista previa en tiempo real</div><div class="card-sub">Lo mismo que se ve en la pantalla</div></div>
         <div class="card-body">
           <div class="cocina-preview-grid" id="cocinaPreviewGrid" style="grid-template-columns:1fr;"><div class="empty"><div class="empty-icon">🍳</div><strong>Sin pedidos activos</strong><span>Aparecerán aquí</span></div></div>
         </div>
@@ -104,7 +104,7 @@ import { escapeHtml, horaDe, ESTADO_LABEL } from './js/common.js';
 function renderCocinaPreview(activos) {
   const el = document.getElementById('cocinaPreviewGrid');
   if (!activos.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">🍳</div><strong>Sin pedidos en cocina</strong><span>Aparecerán aquí</span></div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🍳</div><strong>Sin pedidos pendientes</strong><span>Aparecerán aquí</span></div>';
     return;
   }
   el.innerHTML = activos.map(p => `
@@ -116,7 +116,8 @@ function renderCocinaPreview(activos) {
     </div>`).join('');
 }
 
-initPanel().then(({ uid }) => {
+initPanel().then(({ uid, restoData }) => {
+  document.querySelectorAll('.lbl-p').forEach(x => x.textContent = restoData && restoData.pantalla === 'barra' ? 'barra' : 'cocina');
   const cUrl = baseUrl + 'cocina.html?uid=' + encodeURIComponent(uid);
   new QRCode(document.getElementById('cocinaQr'), { text: cUrl, width: 120, height: 120, colorDark:'#0f0e0b', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
 

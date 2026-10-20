@@ -125,6 +125,15 @@
     .cart-total-row{display:flex;justify-content:space-between;align-items:center;padding:.9rem 0 1rem;}
     .cart-total-label{font-weight:600;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
     .cart-total-val{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;}
+    .cart-step{display:flex;align-items:center;gap:.35rem;margin-top:.3rem;}
+    .cart-step button{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--warm);cursor:pointer;font-size:.9rem;color:var(--ink);-webkit-tap-highlight-color:transparent;}
+    .cart-step span{min-width:1.4em;text-align:center;font-size:.85rem;font-weight:600;}
+    .opt-sub{font-size:.8rem;color:var(--muted);margin:-.6rem 0 1rem;}
+    .opt-list{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;max-height:60vh;overflow-y:auto;padding-bottom:.3rem;}
+    .opt-btn{border:1px solid var(--border);background:#fff;border-radius:6px;padding:.8rem .7rem;text-align:left;font-size:.85rem;font-family:'DM Sans',sans-serif;color:var(--ink);cursor:pointer;line-height:1.3;-webkit-tap-highlight-color:transparent;}
+    .opt-btn:active{background:var(--green);color:#fff;border-color:var(--green);}
+    .opt-btn small{display:block;color:var(--muted);font-size:.72rem;margin-top:.15rem;}
+    .opt-btn:active small{color:rgba(255,255,255,.8);}
     .note-input{width:100%;border:1px solid var(--border);border-radius:3px;padding:.8rem 1rem;font-size:.85rem;margin-bottom:1rem;font-family:'DM Sans',sans-serif;resize:none;background:#fff;color:var(--ink);transition:.2s;}
     .note-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(200,150,62,.1);}
     .confirm-btn{background:var(--green);color:#fff;border:none;width:100%;padding:.95rem;border-radius:3px;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:.2s;letter-spacing:.02em;-webkit-tap-highlight-color:transparent;}
@@ -289,12 +298,24 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="optModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="optTitle"></div>
+      <button class="modal-close" id="optCloseBtn" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="opt-sub" id="optSub"></div>
+    <div class="opt-list" id="optList"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script type="module">
 import { collection, onSnapshot, addDoc, doc, getDoc, query, where, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { db, ensureAuth, escapeHtml, eur, isPro, ALERGENOS, CATS_POR_DEFECTO, CAT_EN } from './js/common.js';
+import { db, ensureAuth, escapeHtml, eur, isPro, ALERGENOS, CATS_POR_DEFECTO, CAT_EN, opcionesDe } from './js/common.js';
 
 /* ── Textos en los dos idiomas ── */
 const T = {
@@ -311,7 +332,7 @@ const T = {
     noConnSub:'Comprueba tu conexión e inténtalo de nuevo.',
     closed:'Carta no disponible', closedSub:'Ahora mismo no se pueden hacer pedidos desde aquí. Pregunta al personal.',
     trackTitle:'Tus pedidos', st_nuevo:'🕐 Recibido', st_preparando:'👨‍🍳 En preparación', st_listo:'✅ ¡Listo! Te lo llevamos',
-    readyToast:'✅ ¡Tu pedido está listo!',
+    readyToast:'✅ ¡Tu pedido está listo!', choose:'Elige', chooseOne:'Toca una opción para añadirla',
     algNote:'Alérgenos según la información del restaurante. Si tienes alguna alergia o intolerancia, avisa al personal antes de pedir.',
     removed:'Algún plato ya no está disponible y se ha quitado del pedido.'
   },
@@ -328,7 +349,7 @@ const T = {
     noConnSub:'Check your connection and try again.',
     closed:'Menu unavailable', closedSub:'Ordering from here is not available right now. Please ask the staff.',
     trackTitle:'Your orders', st_nuevo:'🕐 Received', st_preparando:'👨‍🍳 Being prepared', st_listo:'✅ Ready! On its way',
-    readyToast:'✅ Your order is ready!',
+    readyToast:'✅ Your order is ready!', choose:'Choose', chooseOne:'Tap one to add it',
     algNote:'Allergens as declared by the restaurant. If you have any allergy or intolerance, please tell the staff before ordering.',
     removed:'Some dishes are no longer available and were removed from your order.'
   }
@@ -379,7 +400,11 @@ if (!DEMO && (!uid || !/^[A-Za-z0-9]{10,40}$/.test(uid) || !/^\d{1,4}$/.test(mes
 /* ── Estado ── */
 let resto = null;
 let menuItems = [];      // todos los platos
-let cart = {};           // id → cantidad
+let cart = {};           // clave → cantidad (clave = id del plato, o "id::opción" si el cliente eligió sabor/tipo)
+const SEP = '::';
+const idDeClave = k => k.split(SEP)[0];
+const opcionDeClave = k => k.split(SEP).slice(1).join(SEP);
+const cantidadDe = id => Object.entries(cart).reduce((a, [k, q]) => a + (idDeClave(k) === id ? q : 0), 0);
 let myUid = null;
 
 /* Idioma: solo con plan Pro. Se respeta lo que eligió el cliente; si no, el idioma del móvil. */
@@ -417,7 +442,7 @@ const DEMO_MENU = [
   { id:'d11', categoria:'Bebidas', emoji:'🍺', nombre:'Caña', nombre_en:'Small draught beer', desc:'', desc_en:'', precio:2.2, alergenos:['gluten'] },
   { id:'d12', categoria:'Bebidas', emoji:'🍷', nombre:'Copa de vino tinto', nombre_en:'Glass of red wine', desc:'Rioja crianza', desc_en:'Rioja crianza', precio:3.5, alergenos:['sulfitos'] },
   { id:'d13', categoria:'Bebidas', emoji:'💧', nombre:'Agua mineral', nombre_en:'Mineral water', desc:'50 cl', desc_en:'50 cl', precio:2, alergenos:[] },
-  { id:'d14', categoria:'Bebidas', emoji:'🥤', nombre:'Refresco', nombre_en:'Soft drink', desc:'Cola, naranja o limón', desc_en:'Cola, orange or lemon', precio:2.5, alergenos:[] },
+  { id:'d14', categoria:'Bebidas', emoji:'🥤', nombre:'Refresco', nombre_en:'Soft drink', desc:'', desc_en:'', precio:2.5, alergenos:[], opciones:{ titulo:'Sabor', valores:['Cola','Cola zero','Naranja','Limón'] } },
 ].map(i => ({ activo: true, ...i }));
 
 function iniciarDemo() {
@@ -459,7 +484,7 @@ else ensureAuth().then(async (user) => {
     s.forEach(d => menuItems.push({ id: d.id, ...d.data() }));
     // Si un plato desaparece de la carta, se quita del carrito
     let quitado = false;
-    Object.keys(cart).forEach(id => { if (!menuItems.find(i => i.id === id && i.activo)) { delete cart[id]; quitado = true; } });
+    Object.keys(cart).forEach(k => { if (!menuItems.find(i => i.id === idDeClave(k) && i.activo)) { delete cart[k]; quitado = true; } });
     if (quitado) { syncCart(); showToast(t('removed')); }
     renderMenu(); hideLoader();
   }, () => { fullScreenMsg(t('noConn'), t('noConnSub')); });
@@ -519,7 +544,9 @@ function renderMenu() {
   const hayAlergenos = menuItems.some(i => Array.isArray(i.alergenos) && i.alergenos.length);
   body.innerHTML = '<div id="trackBox"></div>' + cats.map(cat => {
     const items = menuItems.filter(i => (i.categoria || 'Otros') === cat)
-      .sort((a, b) => (b.activo ? 1 : 0) - (a.activo ? 1 : 0) || String(a.nombre).localeCompare(String(b.nombre), 'es'));
+      .sort((a, b) => (b.activo ? 1 : 0) - (a.activo ? 1 : 0)
+        || (Number.isFinite(a.orden) ? a.orden : 1e9) - (Number.isFinite(b.orden) ? b.orden : 1e9)
+        || String(a.nombre).localeCompare(String(b.nombre), 'es'));
     return `<div class="cat-section" id="${catIds[cat]}">
       <div class="cat-heading">${escapeHtml(catDe(cat))}</div>
       ${items.map(item => `
@@ -528,6 +555,7 @@ function renderMenu() {
           <div class="item-body">
             <div class="item-name">${escapeHtml(nombreDe(item))}${!item.activo ? `<span class="agotado-tag">${escapeHtml(t('soldOut'))}</span>` : ''}</div>
             ${descDe(item) ? `<div class="item-desc">${escapeHtml(descDe(item))}</div>` : ''}
+            ${opcionesDe(item) ? `<div class="item-desc" style="color:var(--gold)">${escapeHtml(eligeTxt(opcionesDe(item)))} · ${opcionesDe(item).valores.length}</div>` : ''}
             ${alergenosHtml(item)}
             <div class="item-footer">
               <div class="item-price">${eur(item.precio)}</div>
@@ -565,7 +593,14 @@ function renderTracking() {
 function updateCtrl(id) {
   const el = document.querySelector(`[data-ctrl="${CSS.escape(id)}"]`);
   if (!el) return;
-  const qty = cart[id] || 0;
+  const qty = cantidadDe(id);
+  const item = menuItems.find(i => i.id === id);
+  if (opcionesDe(item)) {   // con sabores/tipos: el + abre la lista para elegir
+    el.innerHTML = qty === 0
+      ? `<button class="ctrl-add" data-elegir="${escapeHtml(id)}" aria-label="+">+</button>`
+      : `<div class="ctrl-count"><span class="qty">${qty}</span><button class="ctrl-plus" data-elegir="${escapeHtml(id)}" aria-label="+">+</button></div>`;
+    return;
+  }
   el.innerHTML = qty === 0
     ? `<button class="ctrl-add" data-add="${escapeHtml(id)}" aria-label="+">+</button>`
     : `<div class="ctrl-count"><button class="ctrl-minus" data-rem="${escapeHtml(id)}" aria-label="−">−</button><span class="qty">${qty}</span><button class="ctrl-plus" data-add="${escapeHtml(id)}" aria-label="+">+</button></div>`;
@@ -578,6 +613,8 @@ document.getElementById('catNav').addEventListener('click', e => {
   btn.classList.add('active');
 });
 document.getElementById('menuBody').addEventListener('click', e => {
+  const elegir = e.target.closest('[data-elegir]');
+  if (elegir) { abrirOpciones(elegir.dataset.elegir); return; }
   const add = e.target.closest('[data-add]');
   const rem = e.target.closest('[data-rem]');
   if (add) {
@@ -590,6 +627,41 @@ document.getElementById('menuBody').addEventListener('click', e => {
   }
 });
 
+/* ── Elegir sabor / tipo ── */
+function eligeTxt(op) { return lang === 'en' ? 'Choose one' : 'Elige ' + op.titulo.toLowerCase(); }
+let optItem = null;
+function abrirOpciones(id) {
+  const item = menuItems.find(i => i.id === id);
+  const op = opcionesDe(item);
+  if (!item || !op) return;
+  optItem = item;
+  document.getElementById('optTitle').textContent = `${item.emoji || ''} ${nombreDe(item)} · ${eur(item.precio)}`.trim();
+  document.getElementById('optSub').textContent = `${eligeTxt(op)} — ${t('chooseOne')}`;
+  document.getElementById('optList').innerHTML = op.valores.map(v => {
+    const m = v.match(/^(.*?)\s*\((.+)\)\s*$/);          // "Fight (menta)" → Fight + menta debajo
+    const n = cart[id + SEP + v] || 0;
+    return `<button class="opt-btn" data-opt="${escapeHtml(v)}"><b>${escapeHtml(m ? m[1] : v)}</b>${n ? ` <span style="color:var(--green)">×${n}</span>` : ''}${m ? `<small>${escapeHtml(m[2])}</small>` : ''}</button>`;
+  }).join('');
+  document.getElementById('optModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function cerrarOpciones() {
+  document.getElementById('optModal').classList.remove('open');
+  document.body.style.overflow = '';
+  optItem = null;
+}
+document.getElementById('optList').addEventListener('click', e => {
+  const b = e.target.closest('[data-opt]');
+  if (!b || !optItem) return;
+  const id = optItem.id;
+  if (cantidadDe(id) >= 30) return;
+  const k = id + SEP + b.dataset.opt;
+  cart[k] = (cart[k] || 0) + 1;
+  cerrarOpciones(); updateCtrl(id); syncCart(); showToast(t('added'));
+});
+document.getElementById('optCloseBtn').addEventListener('click', cerrarOpciones);
+document.getElementById('optModal').addEventListener('click', e => { if (e.target.id === 'optModal') cerrarOpciones(); });
+
 function syncCart() {
   const n = Object.values(cart).reduce((a, b) => a + b, 0);
   document.getElementById('cartCount').textContent = n;
@@ -597,20 +669,21 @@ function syncCart() {
 }
 
 function lineasCarrito() {
-  return Object.entries(cart).map(([id, qty]) => {
-    const item = menuItems.find(i => i.id === id);
-    return item ? { item, qty } : null;
+  return Object.entries(cart).map(([clave, qty]) => {
+    const item = menuItems.find(i => i.id === idDeClave(clave));
+    return item ? { clave, item, qty, opcion: opcionDeClave(clave) } : null;
   }).filter(Boolean);
 }
 
 function openCart() {
   const lineas = lineasCarrito();
   let sum = 0;
-  document.getElementById('cartItems').innerHTML = lineas.map(({ item, qty }) => {
+  document.getElementById('cartItems').innerHTML = lineas.map(({ clave, item, qty, opcion }) => {
     const sub = (Number(item.precio) || 0) * qty; sum += sub;
     return `<div class="cart-item"><div class="cart-item-info">
-      <div class="cart-item-name">${escapeHtml(item.emoji || '')} ${escapeHtml(nombreDe(item))}</div>
-      <div class="cart-item-qty">× ${qty} · ${eur(item.precio)}${escapeHtml(t('perUnit'))}</div>
+      <div class="cart-item-name">${escapeHtml(item.emoji || '')} ${escapeHtml(nombreDe(item))}${opcion ? ` · <b>${escapeHtml(opcion)}</b>` : ''}</div>
+      <div class="cart-item-qty">${eur(item.precio)}${escapeHtml(t('perUnit'))}</div>
+      <div class="cart-step"><button data-cmenos="${escapeHtml(clave)}" aria-label="−">−</button><span>${qty}</span><button data-cmas="${escapeHtml(clave)}" aria-label="+">+</button></div>
     </div><span class="cart-item-price">${eur(sub)}</span></div>`;
   }).join('');
   document.getElementById('cartTotal').textContent = eur(sum);
@@ -622,6 +695,15 @@ function closeCart() {
   document.body.style.overflow = '';
 }
 document.getElementById('cartBtn').addEventListener('click', openCart);
+document.getElementById('cartItems').addEventListener('click', e => {
+  const menos = e.target.closest('[data-cmenos]'), mas = e.target.closest('[data-cmas]');
+  const k = (menos || mas)?.dataset[menos ? 'cmenos' : 'cmas'];
+  if (!k || !(k in cart)) return;
+  if (mas && cantidadDe(idDeClave(k)) < 30) cart[k]++;
+  if (menos && --cart[k] <= 0) delete cart[k];
+  updateCtrl(idDeClave(k)); syncCart();
+  if (!Object.keys(cart).length) closeCart(); else openCart();
+});
 document.getElementById('cartCloseBtn').addEventListener('click', closeCart);
 document.getElementById('cartModal').addEventListener('click', e => { if (e.target.id === 'cartModal') closeCart(); });
 
@@ -631,8 +713,9 @@ document.getElementById('confirmBtn').addEventListener('click', async () => {
   const btn = document.getElementById('confirmBtn');
   btn.disabled = true; btn.textContent = t('sending');
   // En el pedido se guarda el nombre en español: es lo que lee la cocina.
-  const items = lineas.map(({ item, qty }) => ({
-    id: item.id, nombre: item.nombre, qty, precio: Number(item.precio) || 0, categoria: item.categoria || ''
+  const items = lineas.map(({ item, qty, opcion }) => ({
+    id: item.id, nombre: opcion ? `${item.nombre} · ${opcion}` : item.nombre, qty, precio: Number(item.precio) || 0, categoria: item.categoria || '',
+    ...(opcion ? { base: item.nombre, opcion } : {})
   }));
   const total = Math.round(items.reduce((a, i) => a + i.precio * i.qty, 0) * 100) / 100;
   try {
@@ -642,7 +725,7 @@ document.getElementById('confirmBtn').addEventListener('click', async () => {
       estado: 'nuevo', timestamp: serverTimestamp(), cliente: myUid, idioma: lang
     });
     closeCart();
-    const ids = Object.keys(cart); cart = {}; syncCart(); ids.forEach(updateCtrl);
+    const ids = [...new Set(Object.keys(cart).map(idDeClave))]; cart = {}; syncCart(); ids.forEach(updateCtrl);
     document.getElementById('noteInput').value = '';
     showToast(t('sent'));
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -684,7 +767,7 @@ function showToast(msg) {
   el.textContent = msg; el.classList.add('show');
   clearTimeout(showToast._t); showToast._t = setTimeout(() => el.classList.remove('show'), 2600);
 }
-window.addEventListener('popstate', closeCart);
+window.addEventListener('popstate', () => { closeCart(); cerrarOpciones(); });
 </script>
 </body>
 </html>

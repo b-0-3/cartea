@@ -103,6 +103,12 @@
       <div class="field"><label>Precio € *</label><input type="number" id="mPrecio" step="0.01" placeholder="12.50" inputmode="decimal"/></div>
     </div>
     <div class="field"><label>Descripción</label><textarea id="mDesc" placeholder="Ingredientes, elaboración…" rows="2"></textarea></div>
+    <div class="field">
+      <label>Opciones para elegir <span style="font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></label>
+      <input type="text" id="mOptTitulo" maxlength="40" placeholder="Sabor" style="margin-bottom:.4rem"/>
+      <textarea id="mOptValores" rows="3" placeholder="Una por línea, p. ej.:&#10;Menta&#10;Uva&#10;Melón"></textarea>
+      <div class="form-hint">Si pones opciones, el cliente tiene que elegir una al pedirlo (sabor de la shisha, tipo de pizza…). La cocina/barra la ve en el pedido.</div>
+    </div>
     <div class="form-row">
       <div class="field">
         <label>Emoji / Icono</label>
@@ -141,7 +147,7 @@
     <button class="modal-close" id="importClose">×</button>
     <div class="modal-title">Pegar carta entera</div>
     <div style="font-size:.8rem;color:var(--muted);line-height:1.6;margin-bottom:.8rem;">
-      Escribe o pega la carta: <b>un plato por línea</b> con su precio al final. Para cambiar de categoría, pon una línea que empiece por <b>#</b>. Lo que vaya después de una <b>|</b> es la descripción.
+      Escribe o pega la carta: <b>un plato por línea</b> con su precio al final. Para cambiar de categoría, pon una línea que empiece por <b>#</b>. Lo que vaya después de una <b>|</b> es la descripción. Para que el cliente elija sabor o tipo, pon debajo del producto una línea así: <b>&gt; Sabor: Menta, Uva, Melón</b>.
     </div>
     <div class="field">
       <textarea id="importText" rows="11" style="font-family:monospace;font-size:.8rem;" placeholder="# Entrantes&#10;Croquetas caseras 8,50&#10;Patatas bravas ..... 6 €&#10;Gambas al ajillo 11,50 | En cazuela de barro&#10;&#10;# Bebidas&#10;Caña 2,20&#10;Copa de vino 3,50"></textarea>
@@ -158,9 +164,9 @@
 <script type="module">
 
 import { initPanel, db } from './js/panel-core.js';
-import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, writeBatch }
+import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, writeBatch, deleteField }
   from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { escapeHtml, eur, isPro, mailtoPro, ALERGENOS, CATS_POR_DEFECTO } from './js/common.js';
+import { escapeHtml, eur, isPro, mailtoPro, ALERGENOS, CATS_POR_DEFECTO, parsearCarta as parsearTexto, opcionesDe } from './js/common.js';
 
 let uid = null;
 let resto = null;
@@ -243,7 +249,7 @@ function renderMenuTable() {
       <td><div class="menu-emoji-big">${escapeHtml(item.emoji||'🍽️')}</div></td>
       <td>
         <div class="menu-name-cell">${escapeHtml(item.nombre)}${item.nombre_en?` <span style="font-weight:400;color:var(--muted);font-size:.72rem">· ${escapeHtml(item.nombre_en)}</span>`:''}</div>
-        <div class="menu-desc-cell">${escapeHtml(item.desc||'')}</div>
+        <div class="menu-desc-cell">${escapeHtml(item.desc||'')}${opcionesDe(item)?`<div style="color:var(--gold);font-size:.72rem;margin-top:.15rem">↳ Elige ${escapeHtml(opcionesDe(item).titulo.toLowerCase())}: ${opcionesDe(item).valores.length} opciones</div>`:''}</div>
         ${algIconos(item.alergenos) ? `<div class="alg-mini">${algIconos(item.alergenos)}</div>` : ''}
       </td>
       <td><span class="menu-cat-pill">${escapeHtml(item.categoria||'–')}</span></td>
@@ -279,6 +285,9 @@ function openPlatoModal(plato) {
   document.getElementById('mDesc').value    = plato?.desc    || '';
   document.getElementById('mNombreEn').value = plato?.nombre_en || '';
   document.getElementById('mDescEn').value   = plato?.desc_en   || '';
+  const op = opcionesDe(plato);
+  document.getElementById('mOptTitulo').value  = op ? op.titulo : '';
+  document.getElementById('mOptValores').value = op ? op.valores.join('\n') : '';
   setEmoji(plato?.emoji || '🍽️');
   toggleEmojiPanel(false);
   renderAlgGrid(plato?.alergenos);
@@ -303,36 +312,12 @@ function configurarIngles() {
     `· <a href="${mailtoPro(resto)}" style="color:var(--green)">disponible en Pro</a>`;
 }
 
-/* ── Pegar carta entera ──
-   "Croquetas 8,50" · "Bravas ....... 6 €" · "Gambas 11,50 | descripción" · "# Categoría" */
-const EMOJI_CAT = [
-  [/bebida|refresco|agua|zumo/i, '🥤'], [/vino/i, '🍷'], [/cerveza/i, '🍺'], [/c[oó]ctel|copa/i, '🍸'], [/caf[eé]|infusi/i, '☕'],
-  [/postre|dulce/i, '🍰'], [/ensalada/i, '🥗'], [/pizza/i, '🍕'], [/pasta/i, '🍝'], [/arroz|paella/i, '🥘'],
-  [/carne/i, '🥩'], [/pescado|marisco/i, '🐟'], [/hamburguesa/i, '🍔'], [/bocadillo|sandwich/i, '🥪'], [/tapa|picar|entrante|raci/i, '🍤'],
-];
-const emojiPara = (texto) => (EMOJI_CAT.find(([re]) => re.test(texto)) || [null, '🍽️'])[1];
-
+/* ── Pegar carta entera (el formato está en js/common.js) ── */
 function parsearCarta(texto) {
-  let cat = (CATS[0] || 'Principales');
-  const platos = [], fallos = [], catsNuevas = [];
-  texto.split(/\r?\n/).forEach(linea => {
-    const l = linea.trim();
-    if (!l) return;
-    if (l.startsWith('#') || (/:$/.test(l) && !/\d/.test(l))) {
-      cat = l.replace(/^#+/, '').replace(/:$/, '').trim() || cat;
-      if (!CATS.includes(cat) && !catsNuevas.includes(cat)) catsNuevas.push(cat);
-      return;
-    }
-    let [principal, ...resto] = l.split('|');
-    const desc = resto.join('|').trim();
-    const m = principal.trim().match(/^(.+?)[\s.…·:;\-–—]*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|eur|euros)?$/i);
-    if (!m) { fallos.push(l); return; }
-    const nombre = m[1].trim().replace(/[\s.…·:;\-–—]+$/, '');
-    const precio = Math.round(parseFloat(m[2].replace(',', '.')) * 100) / 100;
-    if (!nombre || isNaN(precio)) { fallos.push(l); return; }
-    platos.push({ nombre: nombre.slice(0, 80), precio, desc: desc.slice(0, 200), categoria: cat, emoji: emojiPara(cat + ' ' + nombre), activo: true, alergenos: [] });
-  });
-  return { platos, fallos, catsNuevas };
+  const r = parsearTexto(texto, CATS);
+  const base = allMenu.reduce((m, i) => Math.max(m, Number(i.orden) || 0), -1) + 1;
+  r.platos.forEach(p => { p.orden += base; });
+  return r;
 }
 
 function previewImport() {
@@ -340,6 +325,8 @@ function previewImport() {
   const cats = new Set(platos.map(p => p.categoria));
   let txt = platos.length ? `✓ ${platos.length} plato${platos.length>1?'s':''} en ${cats.size} categoría${cats.size>1?'s':''}` : '';
   if (catsNuevas.length) txt += ` · categorías nuevas: ${catsNuevas.join(', ')}`;
+  const conOpc = platos.filter(p => p.opciones).length;
+  if (conOpc) txt += ` · ${conOpc} con opciones para elegir`;
   if (fallos.length) txt += ` · ⚠️ ${fallos.length} línea${fallos.length>1?'s':''} sin precio (no se crearán): "${fallos.slice(0,2).join('", "')}"${fallos.length>2?'…':''}`;
   document.getElementById('importPreview').textContent = txt;
   document.getElementById('importSave').disabled = !platos.length;
@@ -436,6 +423,9 @@ initPanel().then(({ uid: u, restoData }) => {
     if (isNaN(precio) || precio < 0) { showToast('Pon un precio válido (puede ser 0)', 'error'); return; }
 
     const data = { nombre, precio, desc, emoji, categoria, activo, alergenos };
+    const valoresOpc = [...new Set(document.getElementById('mOptValores').value.split(/\r?\n|,/).map(v => v.trim().slice(0, 60)).filter(Boolean))].slice(0, 60);
+    if (valoresOpc.length) data.opciones = { titulo: document.getElementById('mOptTitulo').value.trim().slice(0, 40) || 'Elige', valores: valoresOpc };
+    else if (editingPlatoId) data.opciones = deleteField();
     if (isPro(resto)) {
       data.nombre_en = document.getElementById('mNombreEn').value.trim();
       data.desc_en   = document.getElementById('mDescEn').value.trim();

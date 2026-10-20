@@ -37,7 +37,8 @@ Hecho con HTML, CSS y JavaScript "a pelo" (sin frameworks) y **Firebase** (Authe
 | `panel-equipo.html` | Dueño | Trabajadores, PINs, contratos y notas para el equipo |
 | `panel-cocina.html` | Dueño | Enlace/QR para abrir la pantalla de cocina |
 | `panel-config.html` | Dueño | Datos, categorías, botón de carbón, plan, contraseña, exportar datos |
-| `admin.html` | Solo tú | Crear cuentas de prueba, cambiar planes, desactivar cuentas |
+| `admin.html` | Solo tú | Crear cuentas de prueba, cambiar planes, desactivar cuentas, enlaces de demo |
+| `cartas/*.txt` | Admin | Cartas ya preparadas para cargar al crear una cuenta (p. ej. `horizonte.txt`) |
 | `js/common.js` | Todas | Conexión a Firebase y utilidades compartidas |
 | `js/panel-core.js` | Panel | Login del dueño, menú lateral, contadores |
 | `js/accesos.js` | Panel | Mantiene las "huellas" de los PIN del equipo |
@@ -119,14 +120,29 @@ Además, cada trabajador tiene su perfil con las notas del jefe y su contrato.
 
 ## Planes, pruebas gratis y panel de administración
 
-Todo se gestiona desde **`admin.html`** (entrando con tu cuenta de administrador; en tu panel aparece el enlace **🛠️ Clientes (admin)**). No hace falta tocar Firebase.
+Todo se gestiona desde **`admin.html`** (entrando con la cuenta de administrador, **borjatorresalcala@gmail.com**; en tu panel aparece el enlace **🛠️ Clientes (admin)**). No hace falta tocar Firebase.
 
 - **Quien se registra solo** desde la web entra en **Básico** (gratis, 5 mesas).
-- **Cuenta de prueba:** en *Crear cuenta de prueba* pones nombre del local, email, días (30), mesas y si quiere el botón de carbón. Te da las credenciales para pasárselas. Tiene todo lo de Pro hasta esa fecha y ve en su panel cuántos días le quedan.
+- **Cuenta de prueba:** en *Crear cuenta de prueba* pones nombre del local, email, días (30), mesas, si quiere el botón de carbón, si la pantalla de pedidos es de **cocina o de barra** y, si quieres, una **carta ya preparada** (archivos de la carpeta `cartas/`). Te da las credenciales para pasárselas. Tiene todo lo de Pro hasta esa fecha y ve en su panel cuántos días le quedan.
 - **Cuando acaba la prueba:** su panel muestra "Tu mes de prueba terminó" con un botón para escribirte. **La carta de sus clientes, la cocina y el equipo siguen funcionando**, para no dejarle tirado en pleno servicio.
 - **Cuando te pague** (Bizum, transferencia… fuera de la web): pulsa **⭐ Pro** en su fila. **Si no paga:** **Desactivar** (deja de funcionar todo). También puedes alargar la prueba (**🎁 Prueba**) o pasarle a **Básico**.
 
 > El dueño de un restaurante **no puede** cambiarse él mismo el plan, la fecha de prueba ni el estado de la cuenta: las reglas de seguridad lo impiden.
+
+- **🔗 Demo** (en cada fila): enlaces para enseñarlo — la carta del cliente (mesa 1 y 2), la pantalla de pedidos y la app del equipo. **📋 Carta**: añade una carta preparada a ese local.
+
+## Sabores y tipos (shishas, pizzas, zumos…)
+
+Un producto puede tener **opciones para elegir**: al pedirlo, el cliente tiene que tocar una (por ejemplo el sabor). En la cocina/barra sale como *"Shisha Rubio · Fight (menta)"*. En Ventas cuentan juntas como *"Shisha Rubio"*.
+
+- En **Mi menú → ✏️** de un producto: *Opciones para elegir* (título, p. ej. "Sabor", y una opción por línea).
+- En **📥 Pegar carta entera**, debajo del producto: `> Sabor: Menta, Uva, Melón`
+
+Para las shishas se crea un producto por tipo (Rubio, Full Black, Fusión, cada uno con su precio) y cada uno con sus sabores: el cliente elige **tipo y luego sabor**.
+
+## Pantalla de cocina o de barra
+
+En **Configuración** se elige quién prepara los pedidos de la pantalla de pared: **Cocina** (restaurante normal) o **Barra** (bares y cachimbas sin cocina). Con *Barra*, la pantalla se llama así y recibe todos los pedidos.
 
 ## Cobrar las mesas (no hay pagos en la web)
 

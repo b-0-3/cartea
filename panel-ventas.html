@@ -228,7 +228,7 @@ function render() {
   const porPlato = new Map();
   const porCat = new Map();
   validos.forEach(p => (p.items || []).forEach(i => {
-    const k = i.nombre || '¿?';
+    const k = i.base || i.nombre || '¿?';   // "Shisha Rubio · Menta" y "Shisha Rubio · Uva" cuentan juntas
     const e = porPlato.get(k) || { nombre: k, qty: 0, eur: 0 };
     const imp = (Number(i.precio) || 0) * (Number(i.qty) || 0);
     e.qty += Number(i.qty) || 0; e.eur += imp;
