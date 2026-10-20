@@ -2,7 +2,20 @@
 
 Carta digital con QR para restaurantes. El cliente escanea el QR de su mesa, ve la carta, pide y llama al camarero desde el móvil. La cocina recibe los pedidos en una pantalla, el equipo trabaja desde su móvil con un PIN y el dueño lo controla todo desde su panel.
 
-Hecho con HTML, CSS y JavaScript "a pelo" (sin frameworks), **Firebase** (Authentication + Firestore) y alojado en **Netlify**.
+Hecho con HTML, CSS y JavaScript "a pelo" (sin frameworks) y **Firebase** (Authentication + Firestore).
+
+## Estado actual (octubre 2026)
+
+| | |
+|---|---|
+| **Web de pruebas** | https://b-0-3.github.io/cartea/ (GitHub Pages) |
+| **Carta de demostración** | https://b-0-3.github.io/cartea/menu.html?demo (para enseñar a restaurantes, no necesita cuenta) |
+| **Firebase** | Proyecto `mesaqr-73606`. Email/contraseña y Anónimo activados. **Reglas nuevas publicadas** ✅ |
+| **Probado con Firebase real** | Panel del dueño, equipo, PIN del camarero, pantalla de cocina ✅ |
+| **Falta probar** | Pedido real desde un móvil, avisos al camarero, varios móviles a la vez, recuperar contraseña |
+| **Producción** | Todavía no. Se subirá a Netlify o al dominio propio cuando esté todo probado. |
+
+> El repo está en **público** solo para poder usar GitHub Pages gratis mientras se prueba. Cuando pase a producción, volver a ponerlo en privado (Settings → Change visibility).
 
 ---
 
@@ -30,7 +43,7 @@ Hecho con HTML, CSS y JavaScript "a pelo" (sin frameworks), **Firebase** (Authen
 | `css/panel.css` | Panel | Estilos del panel |
 | `firestore.rules` | Firebase | **Reglas de seguridad** (hay que pegarlas en Firebase) |
 | `aviso-legal.html`, `privacidad.html`, `cookies.html`, `terminos.html` | Todo el mundo | Textos legales (plantillas: hay que rellenar tus datos) |
-| `netlify.toml`, `404.html` | Netlify | Configuración del alojamiento y página de error |
+| `netlify.toml`, `404.html` | Netlify | Configuración del alojamiento (para cuando pase a producción) y página de error |
 
 ---
 
@@ -46,13 +59,60 @@ Copia **todo** el contenido de `firestore.rules`, pégalo sustituyendo lo que ha
 
 > Hazlo justo después de subir esta versión a Netlify. Las reglas nuevas y el código nuevo van juntos.
 
-### 3. Netlify
-Conecta este repositorio de GitHub a tu sitio de Netlify (en la configuración del sitio, en la parte de despliegue / repositorio). No hace falta comando de build: se publica la carpeta tal cual (`netlify.toml` ya lo indica). Cada vez que subas un cambio a la rama `main`, Netlify publica solo.
+### 3. Publicar la web
+- **Pruebas (ahora):** GitHub Pages → Settings → Pages → *Deploy from a branch* → `main` / `(root)`. Cada cambio en `main` se publica solo en 1-2 minutos.
+- **Producción (más adelante):** Netlify o el dominio propio. En Netlify basta con conectar este repo (no hace falta comando de build; `netlify.toml` ya lo indica). Para conectar el repo, GitHub pedirá confirmarlo con GitHub Mobile.
 
 ### 4. Después de publicar
 - Entra en tu panel y abre **Resumen** o **Equipo** una vez: así se generan las huellas de los PIN y el equipo puede entrar.
 - Si tienes algún trabajador antiguo con rol **Cocina**, edítalo y ponle otro rol (cocina ya no entra por móvil, usa la pantalla de pared).
 - Rellena tus datos en las páginas legales: busca `[TU NOMBRE Y APELLIDOS]`, `[TU NIF]`, `[TU DIRECCIÓN COMPLETA]`, `[TU DOMINIO]` y `[TU CIUDAD]`.
+
+---
+
+## Para dar de alta a un restaurante (en 10 minutos)
+
+1. Enséñale la **carta de demostración** en tu móvil (`menu.html?demo`): puede pedir, ver el pedido "en cocina" y cambiar a inglés.
+2. Créale la cuenta en la web (**Empieza gratis**).
+3. **Mi menú → 📥 Pegar carta entera:** un plato por línea con el precio al final, y `# Categoría` para cambiar de sección. Ejemplo:
+   ```
+   # Entrantes
+   Croquetas caseras 8,50
+   Gambas al ajillo 11,50 | En cazuela de barro
+   # Bebidas
+   Caña 2,20
+   ```
+4. Repasa los **alérgenos** de cada plato (botón ✏️). Es obligatorio por ley.
+5. **Mesas** → número de mesas → **Códigos QR** → imprimir.
+6. Si tiene equipo: **Equipo** → un PIN para cada uno y que escaneen el QR de acceso.
+7. **Pantalla de cocina** → abrirla en una tablet de la cocina.
+
+## La zona de empleados, explicada fácil
+
+Es el "walkie-talkie" del restaurante, pero en el móvil de cada trabajador: cuando un cliente pide o llama desde su mesa, el aviso le salta a quien le toca.
+
+| Rol | Qué ve |
+|---|---|
+| **Camarero** | Le vibra el móvil (Android) o pita cuando una mesa le llama, pide la cuenta o un plato está listo. Es el más importante. |
+| **Barra** | Solo las bebidas que tiene que preparar. |
+| **Limpieza** | Qué mesas hay que limpiar. |
+| **Encargado** | Todo a la vez, incluidas las ventas del día. |
+| **Cocina** | No usa el móvil: usa la **pantalla de pared**. |
+
+Además, cada trabajador tiene su perfil con las notas del jefe y su contrato.
+
+**Cada negocio activa solo lo que tiene:**
+
+| Negocio | Qué usaría |
+|---|---|
+| Bar pequeño (1-2 personas) | Ningún rol: el dueño mira el panel en su móvil. |
+| Cafetería / terraza | 1-2 camareros (el aviso de "la mesa 7 te llama"). |
+| Restaurante normal | Camareros + pantalla de cocina. |
+| Restaurante grande | Camareros + barra + cocina + encargado + limpieza. |
+
+> Para vender: habla de la carta con QR y los pedidos. Lo del equipo se enseña cuando el cliente diga "mis camareros no se enteran de las mesas".
+
+> **iPhone:** la vibración no funciona en las webs del iPhone (Apple no lo permite). El camarero con iPhone recibe el pitido y el aviso en pantalla.
 
 ---
 
@@ -92,8 +152,7 @@ Para **bloquear una cuenta** (por ejemplo, impago): añade el campo **`activo`**
 - ✅ Nadie de fuera puede ver la lista de restaurantes, ni la lista del equipo, ni cambiar la carta, ni cambiarse el plan.
 - ✅ Todo lo que escribe un cliente (notas, nombres) se muestra como texto: no se puede colar código en tu panel.
 - ✅ Los pedidos solo se crean con una forma válida y, si la cuenta está desactivada, no entran.
-- ⚠️ **El PIN de 4 cifras es una protección básica.** Alguien con conocimientos podría escribir un programa que pruebe las 10.000 combinaciones y ver las fichas del equipo (incluido lo que pongas en "Mi contrato"). Por eso: no guardes ahí datos muy delicados (DNI, cuenta bancaria). El arreglo completo es un mini-servidor (Netlify Function) que compruebe el PIN y bloquee tras varios fallos: está en la lista de pendientes.
-- ⚠️ Cualquiera con el enlace de un restaurante puede leer sus pedidos de hoy y marcar avisos como atendidos (la cocina y el equipo entran sin cuenta). Se arregla con lo mismo del punto anterior.
+- ⚠️ El acceso del equipo con PIN es una protección básica: no guardes en "Mi contrato" datos muy delicados (DNI, cuenta bancaria). Reforzarlo está en la lista de pendientes.
 
 ---
 
@@ -107,13 +166,15 @@ py -m http.server 8000
 
 (en Mac/Linux: `python3 -m http.server 8000`). Luego abre `http://localhost:8000` en el navegador.
 
-> Usa `localhost`, no la IP del ordenador: el PIN del equipo usa una función del navegador que solo funciona en `https://` o en `localhost`.
+> Usa `localhost`, no la IP del ordenador: el PIN del equipo usa una función del navegador que solo funciona en `https://` o en `localhost`. Para probar desde el móvil, usa la web de pruebas de GitHub Pages.
 
 ---
 
 ## Pendiente para más adelante (necesita servicios de terceros)
 
-- Mini-servidor para el PIN del equipo y la cocina (Netlify Function + clave de servicio de Firebase): bloqueo tras varios intentos y que cada dispositivo solo vea su restaurante.
+- Mini-servidor para el acceso del equipo y la cocina (Netlify Function + clave de servicio de Firebase), para reforzar la seguridad.
+- Rellenar los datos legales (nombre, NIF, dirección) en las 4 páginas legales.
+- Volver a poner el repo en privado al pasar a producción.
 - Cobro automático del plan Pro (Stripe).
 - Nóminas en PDF para el equipo (necesita Firebase Storage → plan Blaze de pago).
 - Revisión de los textos legales por un profesional.
