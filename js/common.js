@@ -214,10 +214,12 @@ export function emojiPara(texto) { return (EMOJI_CAT.find(([re]) => re.test(text
 
 export function parsearCarta(texto, catsActuales = []) {
   let cat = catsActuales[0] || 'Principales';
-  const platos = [], fallos = [], catsNuevas = [], catsVistas = [];
+  const platos = [], fallos = [], catsNuevas = [], catsVistas = [], meta = {};
   String(texto || '').split(/\r?\n/).forEach(linea => {
     const l = linea.trim();
     if (!l) return;
+    const mm = l.match(/^@([a-z]+)\s*:\s*(.*)$/i);  // "@nombre: Horizonte Lounge" → datos del local (para la demo)
+    if (mm) { meta[mm[1].toLowerCase()] = mm[2].trim().slice(0, 80); return; }
     if (l.startsWith('>')) {                       // opciones del plato anterior
       const ultimo = platos[platos.length - 1];
       const cuerpo = l.slice(1).trim();
@@ -244,5 +246,19 @@ export function parsearCarta(texto, catsActuales = []) {
     if (!catsVistas.includes(cat)) catsVistas.push(cat);
     platos.push({ nombre: nombre.slice(0, 80), precio, desc: desc.slice(0, 200), categoria: cat, emoji: emojiPara(cat + ' ' + nombre), activo: true, alergenos: [], orden: platos.length });
   });
-  return { platos, fallos, catsNuevas, catsVistas };
+  return { platos, fallos, catsNuevas, catsVistas, meta };
 }
+
+/* ── Demo sin cuenta: carta preparada (cartas/<nombre>.txt) ── */
+export const nombreCartaValido = (n) => /^[a-z0-9-]{1,30}$/.test(String(n || ''));
+export async function cargarCartaDemo(nombre) {
+  if (!nombreCartaValido(nombre)) throw new Error('carta no válida');
+  const r = await fetch('cartas/' + nombre + '.txt', { cache: 'no-store' });
+  if (!r.ok) throw new Error('carta no encontrada');
+  const { platos, catsVistas, meta } = parsearCarta(await r.text(), []);
+  return {
+    resto: { nombre: meta.nombre || nombre, plan: 'pro', cats: catsVistas, avisoCarbon: /^s[ií]/i.test(meta.carbon || ''), pantalla: meta.pantalla === 'barra' ? 'barra' : 'cocina' },
+    menu: platos.map((p, i) => ({ id: 'p' + i, ...p })),
+  };
+}
+export const salaValida = (s) => /^[a-z0-9]{4,20}$/.test(String(s || ''));
