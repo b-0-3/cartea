@@ -78,6 +78,17 @@
         </div>
 
         <div class="card">
+          <div class="card-hd"><div><div class="card-title">Botones para el cliente</div><div class="card-sub">Lo que el cliente puede pedir desde su mesa, aparte de la carta</div></div></div>
+          <div class="card-body">
+            <div style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:.8rem">Siempre salen <b>🔔 Llamar camarero</b> y <b>🧾 Pedir cuenta</b>.</div>
+            <div class="field" style="display:flex;align-items:center;justify-content:space-between;margin:0;">
+              <div><label style="margin:0;">🔥 Cambiar carbón</label><div class="form-hint" style="margin-top:.1rem;">Para locales de cachimbas</div></div>
+              <label class="toggle"><input type="checkbox" id="cfgCarbon"/><span class="slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-hd"><div><div class="card-title">Categorías de la carta</div><div class="card-sub">El orden de aquí es el orden en que las ve el cliente</div></div></div>
           <div class="card-body">
             <div class="field"><label>Añadir nueva categoría</label>
@@ -135,7 +146,7 @@ import { initPanel, db, auth } from './js/panel-core.js';
 import { doc, updateDoc, collection, getDocs, writeBatch }
   from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { escapeHtml, isPro, mailtoPro, mesasEfectivas, CATS_POR_DEFECTO, LIMITE_MESAS_BASICO } from './js/common.js';
+import { escapeHtml, isPro, enPrueba, finPrueba, diasPrueba, textoDiasPrueba, mailtoPro, CATS_POR_DEFECTO, LIMITE_MESAS_BASICO } from './js/common.js';
 
 let uid = null;
 let restoData = null;
@@ -174,10 +185,13 @@ document.getElementById('catsList').addEventListener('click', async e => {
 
 function renderPlan() {
   const pro = isPro(restoData);
+  const prueba = enPrueba(restoData);
   document.getElementById('planCardCfg').innerHTML = `
-    <div class="card-hd"><div class="card-title">Tu plan</div><span class="plan-pill ${pro?'pro':''}">${pro?'Pro':'Básico'}</span></div>
+    <div class="card-hd"><div class="card-title">Tu plan</div><span class="plan-pill ${pro?'pro':''}">${prueba?'Prueba':pro?'Pro':'Básico'}</span></div>
     <div class="card-body" style="font-size:.85rem;line-height:1.7;">
-      ${pro
+      ${prueba
+        ? `Estás probando <b>Cartéa Pro gratis</b> hasta el <b>${finPrueba(restoData).toLocaleDateString('es-ES',{day:'numeric',month:'long'})}</b> (${diasPrueba(restoData)===0?'hoy es el último día':textoDiasPrueba(restoData)}). Tienes todo desbloqueado. Para seguir después, escríbenos a <a href="mailto:hola@mesaqr.com" style="color:var(--green)">hola@mesaqr.com</a>.`
+        : pro
         ? `Tienes <b>Cartéa Pro</b>: hasta 200 mesas, página de Ventas y carta en inglés. Para cualquier cambio en tu plan o factura, escríbenos a <a href="mailto:hola@mesaqr.com" style="color:var(--green)">hola@mesaqr.com</a>.`
         : `Plan <b>Básico</b> (gratis): hasta ${LIMITE_MESAS_BASICO} mesas, carta, QR, pedidos, cocina y equipo.<br>
            Con <b>Pro (29 €/mes, sin permanencia)</b> además: hasta 200 mesas, página de Ventas con estadísticas y carta en inglés.
@@ -201,6 +215,15 @@ initPanel().then(({ uid: u, restoData: rd }) => {
   document.getElementById('cfgAvatar').textContent = initials;
   renderCatsList();
   renderPlan();
+
+  const carbon = document.getElementById('cfgCarbon');
+  carbon.checked = !!restoData.avisoCarbon;
+  carbon.addEventListener('change', async () => {
+    try {
+      await updateDoc(doc(db,'restaurantes',uid), { avisoCarbon: carbon.checked });
+      showToast(carbon.checked ? 'Botón "Cambiar carbón" activado ✓' : 'Botón "Cambiar carbón" quitado', 'success');
+    } catch (e) { carbon.checked = !carbon.checked; showToast('No se pudo guardar', 'error'); }
+  });
 
   document.getElementById('saveConfigBtn').addEventListener('click', async () => {
     const nombre  = document.getElementById('cfgNombre').value.trim();

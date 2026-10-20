@@ -10,9 +10,9 @@ Hecho con HTML, CSS y JavaScript "a pelo" (sin frameworks) y **Firebase** (Authe
 |---|---|
 | **Web de pruebas** | https://b-0-3.github.io/cartea/ (GitHub Pages) |
 | **Carta de demostración** | https://b-0-3.github.io/cartea/menu.html?demo (para enseñar a restaurantes, no necesita cuenta) |
-| **Firebase** | Proyecto `mesaqr-73606`. Email/contraseña y Anónimo activados. **Reglas nuevas publicadas** ✅ |
+| **Firebase** | Proyecto `mesaqr-73606`. Email/contraseña y Anónimo activados. Reglas: **volver a publicar** `firestore.rules` tras cada versión que las cambie |
 | **Probado con Firebase real** | Panel del dueño, equipo, PIN del camarero, pantalla de cocina ✅ |
-| **Falta probar** | Pedido real desde un móvil, avisos al camarero, varios móviles a la vez, recuperar contraseña |
+| **Falta probar** | Pedido real desde un móvil, avisos al camarero, cobrar una mesa, varios móviles a la vez, recuperar contraseña |
 | **Producción** | Todavía no. Se subirá a Netlify o al dominio propio cuando esté todo probado. |
 
 > El repo está en **público** solo para poder usar GitHub Pages gratis mientras se prueba. Cuando pase a producción, volver a ponerlo en privado (Settings → Change visibility).
@@ -36,7 +36,8 @@ Hecho con HTML, CSS y JavaScript "a pelo" (sin frameworks) y **Firebase** (Authe
 | `panel-qr.html` | Dueño | Códigos QR de cada mesa para imprimir |
 | `panel-equipo.html` | Dueño | Trabajadores, PINs, contratos y notas para el equipo |
 | `panel-cocina.html` | Dueño | Enlace/QR para abrir la pantalla de cocina |
-| `panel-config.html` | Dueño | Datos, categorías, plan, contraseña, exportar datos |
+| `panel-config.html` | Dueño | Datos, categorías, botón de carbón, plan, contraseña, exportar datos |
+| `admin.html` | Solo tú | Crear cuentas de prueba, cambiar planes, desactivar cuentas |
 | `js/common.js` | Todas | Conexión a Firebase y utilidades compartidas |
 | `js/panel-core.js` | Panel | Login del dueño, menú lateral, contadores |
 | `js/accesos.js` | Panel | Mantiene las "huellas" de los PIN del equipo |
@@ -116,19 +117,28 @@ Además, cada trabajador tiene su perfil con las notas del jefe y su contrato.
 
 ---
 
-## Planes: cómo activar Pro a un cliente
+## Planes, pruebas gratis y panel de administración
 
-Mientras no haya pagos automáticos, Pro se activa a mano:
+Todo se gestiona desde **`admin.html`** (entrando con tu cuenta de administrador; en tu panel aparece el enlace **🛠️ Clientes (admin)**). No hace falta tocar Firebase.
 
-1. El cliente te escribe (botón **Pasar a Pro** del panel → email a `hola@mesaqr.com` con su ID).
-2. Cobras (Bizum, transferencia…).
-3. Firebase Console → Firestore → colección `restaurantes` → documento con su ID → añade o cambia el campo **`plan`** (tipo *string*) a **`pro`**.
-4. El cliente recarga su panel y ya tiene Pro.
+- **Quien se registra solo** desde la web entra en **Básico** (gratis, 5 mesas).
+- **Cuenta de prueba:** en *Crear cuenta de prueba* pones nombre del local, email, días (30), mesas y si quiere el botón de carbón. Te da las credenciales para pasárselas. Tiene todo lo de Pro hasta esa fecha y ve en su panel cuántos días le quedan.
+- **Cuando acaba la prueba:** su panel muestra "Tu mes de prueba terminó" con un botón para escribirte. **La carta de sus clientes, la cocina y el equipo siguen funcionando**, para no dejarle tirado en pleno servicio.
+- **Cuando te pague** (Bizum, transferencia… fuera de la web): pulsa **⭐ Pro** en su fila. **Si no paga:** **Desactivar** (deja de funcionar todo). También puedes alargar la prueba (**🎁 Prueba**) o pasarle a **Básico**.
 
-Para volver a Básico: cambia `plan` a `basico`.
-Para **bloquear una cuenta** (por ejemplo, impago): añade el campo **`activo`** (tipo *boolean*) = `false`. Su panel y su carta dejan de funcionar hasta que lo vuelvas a poner en `true`.
+> El dueño de un restaurante **no puede** cambiarse él mismo el plan, la fecha de prueba ni el estado de la cuenta: las reglas de seguridad lo impiden.
 
-> El dueño de un restaurante **no puede** cambiarse él mismo `plan` ni `activo`: las reglas de seguridad lo impiden.
+## Cobrar las mesas (no hay pagos en la web)
+
+Un pedido **no cuenta como venta hasta que se cobra**. El cliente paga en el local como siempre (efectivo o tarjeta) y el camarero lo marca:
+
+1. La mesa pide la cuenta → al camarero le salta el aviso con el botón **💶 Cobrar** (también tiene la lista **Mesas por cobrar**, y las mesas pendientes llevan 💶).
+2. Abre la mesa, ve el total y pulsa **💶 Efectivo** o **💳 Tarjeta**. Se marcan todos los pedidos de esa mesa como cobrados, se quitan sus avisos y la mesa pasa a "por limpiar".
+3. En el panel: **Resumen** muestra *Por cobrar* y *Ventas hoy (cobrado)*; **Ventas** y el CSV solo cuentan lo cobrado. El dueño también puede cobrar desde **Pedidos en vivo**.
+
+## Botón de carbón (cachimbas)
+
+En **Configuración → Botones para el cliente** se activa **🔥 Cambiar carbón**. El cliente lo pulsa desde su móvil y al camarero le llega como un aviso más ("Mesa 4: cambio de carbón").
 
 | | Básico (gratis) | Pro (29 €/mes) |
 |---|---|---|

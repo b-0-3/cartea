@@ -73,8 +73,8 @@
 
     <div class="stats-grid">
       <div class="stat-card green"><div class="stat-icon">⚡</div><div class="stat-label">Pedidos activos</div><div class="stat-val" id="s-activos">0</div><div class="stat-sub">en este momento</div></div>
-      <div class="stat-card"><div class="stat-icon">🧾</div><div class="stat-label">Pedidos hoy</div><div class="stat-val" id="s-pedidos">0</div><div class="stat-sub" id="s-ticket">ticket medio –</div></div>
-      <div class="stat-card gold"><div class="stat-icon">💶</div><div class="stat-label">Ventas hoy</div><div class="stat-val" id="s-ventas">0 €</div><div class="stat-sub">desde las 5:00</div></div>
+      <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-label">Por cobrar</div><div class="stat-val" id="s-porcobrar">0 €</div><div class="stat-sub" id="s-porcobrar-sub">ninguna mesa</div></div>
+      <div class="stat-card gold"><div class="stat-icon">💶</div><div class="stat-label">Ventas hoy (cobrado)</div><div class="stat-val" id="s-ventas">0 €</div><div class="stat-sub" id="s-ticket">desde las 5:00</div></div>
       <div class="stat-card rust"><div class="stat-icon">🔔</div><div class="stat-label">Avisos pendientes</div><div class="stat-val" id="s-avisos">0</div><div class="stat-sub">por atender</div></div>
     </div>
     <div class="grid-2">
@@ -98,7 +98,7 @@
 import { initPanel, db } from './js/panel-core.js';
 import { collection, onSnapshot, getDocs, query, where, Timestamp, doc, updateDoc }
   from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { escapeHtml, eur, horaDe, inicioJornada, alCambiarJornada, usaBarra, ESTADOS_ACTIVOS, ESTADO_LABEL, isPro, mailtoPro, LIMITE_MESAS_BASICO } from './js/common.js';
+import { escapeHtml, eur, horaDe, inicioJornada, alCambiarJornada, usaBarra, ESTADOS_ACTIVOS, ESTADO_LABEL, isPro, mailtoPro, LIMITE_MESAS_BASICO, cobrado, porCobrar, AVISO_LABEL } from './js/common.js';
 import { sincronizarAccesos } from './js/accesos.js';
 
 let activos = [];
@@ -108,13 +108,18 @@ let avisos = [];
 function badgeCls(e) { return e==='nuevo'?'badge-rust':e==='preparando'?'badge-gold':'badge-green'; }
 
 function render() {
-  const validos = jornada.filter(p => p.estado !== 'cancelado');
-  const ventas = validos.reduce((s,p) => s + (Number(p.total)||0), 0);
+  // Una venta solo cuenta cuando el camarero la marca como cobrada
+  const pagados = jornada.filter(cobrado);
+  const ventas = pagados.reduce((s,p) => s + (Number(p.total)||0), 0);
+  const pendientes = jornada.filter(porCobrar);
+  const pendiente = pendientes.reduce((s,p) => s + (Number(p.total)||0), 0);
+  const mesasPend = new Set(pendientes.map(p => String(p.mesa))).size;
 
   document.getElementById('s-activos').textContent = activos.length;
-  document.getElementById('s-pedidos').textContent = validos.length;
+  document.getElementById('s-porcobrar').textContent = eur(pendiente).replace(/,00\s?€$/, ' €');
+  document.getElementById('s-porcobrar-sub').textContent = mesasPend ? mesasPend + ' mesa' + (mesasPend > 1 ? 's' : '') + ' sin pagar' : 'ninguna mesa';
   document.getElementById('s-ventas').textContent = eur(ventas).replace(/,00\s?€$/, ' €');
-  document.getElementById('s-ticket').textContent = validos.length ? 'ticket medio ' + eur(ventas / validos.length) : 'ticket medio –';
+  document.getElementById('s-ticket').textContent = pagados.length ? pagados.length + ' pedidos · ticket medio ' + eur(ventas / pagados.length) : 'desde las 5:00';
   document.getElementById('s-avisos').textContent = avisos.length;
 
   const rp = document.getElementById('resumenPedidos');
@@ -134,10 +139,10 @@ function render() {
   const items = [];
   jornada.forEach(p => {
     const tipo = p.estado === 'completado' ? 'completado' : 'nuevo';
-    const txt = p.estado === 'cancelado' ? 'pedido cancelado' : p.estado === 'completado' ? 'pedido servido' : 'pedido ' + (ESTADO_LABEL[p.estado]||p.estado).toLowerCase();
+    const txt = p.estado === 'cancelado' ? 'pedido cancelado' : cobrado(p) ? 'cobrado' : p.estado === 'completado' ? 'servido, falta cobrar' : 'pedido ' + (ESTADO_LABEL[p.estado]||p.estado).toLowerCase();
     items.push({ type: tipo, text: `Mesa ${p.mesa} — ${txt} (${eur(p.total)})`, ts: p.timestamp });
   });
-  avisos.forEach(a => items.push({ type:'aviso', text:`Mesa ${a.mesa} — ${a.tipo==='camarero'?'llama al camarero':'pide la cuenta'}`, ts:a.timestamp }));
+  avisos.forEach(a => items.push({ type:'aviso', text:`Mesa ${a.mesa} — ${(AVISO_LABEL[a.tipo]||'aviso').replace(/^\S+\s/, '').toLowerCase()}`, ts:a.timestamp }));
   items.sort((a,b) => (b.ts?.seconds||0)-(a.ts?.seconds||0));
   const el = document.getElementById('activityFeed');
   el.innerHTML = !items.length

@@ -86,7 +86,7 @@
       <div id="ventasContenido">
         <div class="stats-grid">
           <div class="stat-card gold"><div class="stat-icon">💶</div><div class="stat-label">Ventas</div><div class="stat-val" id="k-ventas">–</div><div class="stat-sub" id="k-ventas-sub">&nbsp;</div></div>
-          <div class="stat-card"><div class="stat-icon">🧾</div><div class="stat-label">Pedidos</div><div class="stat-val" id="k-pedidos">–</div><div class="stat-sub" id="k-cancel">&nbsp;</div></div>
+          <div class="stat-card"><div class="stat-icon">🧾</div><div class="stat-label">Pedidos cobrados</div><div class="stat-val" id="k-pedidos">–</div><div class="stat-sub" id="k-cancel">&nbsp;</div></div>
           <div class="stat-card green"><div class="stat-icon">🎯</div><div class="stat-label">Ticket medio</div><div class="stat-val" id="k-ticket">–</div><div class="stat-sub">por pedido</div></div>
           <div class="stat-card"><div class="stat-icon">🍽️</div><div class="stat-label">Platos vendidos</div><div class="stat-val" id="k-platos">–</div><div class="stat-sub">unidades</div></div>
         </div>
@@ -124,7 +124,7 @@
 import { initPanel, db } from './js/panel-core.js';
 import { collection, onSnapshot, query, where, Timestamp }
   from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { escapeHtml, eur, inicioJornada, jornadaMasDias, isPro, mailtoPro, ESTADO_LABEL, HORA_INICIO_JORNADA } from './js/common.js';
+import { escapeHtml, eur, inicioJornada, jornadaMasDias, isPro, mailtoPro, ESTADO_LABEL, HORA_INICIO_JORNADA, cobrado } from './js/common.js';
 
 let uid = null;
 let resto = null;
@@ -176,14 +176,16 @@ function suscribir() {
 }
 
 function render() {
-  const validos = pedidos.filter(p => p.estado !== 'cancelado');
-  const cancelados = pedidos.length - validos.length;
+  // Solo cuenta lo COBRADO (lo marca el camarero o tú en "Pedidos en vivo")
+  const validos = pedidos.filter(cobrado);
+  const sinCobrar = pedidos.filter(p => p.estado !== 'cancelado' && !cobrado(p)).length;
+  const cancelados = pedidos.filter(p => p.estado === 'cancelado').length;
   const total = validos.reduce((s, p) => s + (Number(p.total) || 0), 0);
   const unidades = validos.reduce((s, p) => s + (p.items || []).reduce((a, i) => a + (Number(i.qty) || 0), 0), 0);
 
   document.getElementById('k-ventas').textContent = eurCorto(total);
   document.getElementById('k-pedidos').textContent = validos.length;
-  document.getElementById('k-cancel').textContent = cancelados ? cancelados + ' cancelado' + (cancelados > 1 ? 's' : '') + ' (no cuentan)' : 'sin cancelaciones';
+  document.getElementById('k-cancel').textContent = [sinCobrar ? sinCobrar + ' sin cobrar' : '', cancelados ? cancelados + ' cancelado' + (cancelados > 1 ? 's' : '') : ''].filter(Boolean).join(' · ') || 'todo cobrado';
   document.getElementById('k-ticket').textContent = validos.length ? eur(total / validos.length) : '–';
   document.getElementById('k-platos').textContent = unidades;
   const [desde, hasta] = limites(rango);
@@ -326,13 +328,14 @@ document.getElementById('csvBtn').addEventListener('click', () => {
   const num = n => (Number(n) || 0).toFixed(2).replace('.', ',');
   // Lo que escriben los clientes podría empezar por "=" y Excel lo tomaría por una fórmula: se neutraliza.
   const cel = v => { let t = String(v ?? ''); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; };
-  const filas = [['Fecha', 'Hora', 'Mesa', 'Platos', 'Unidades', 'Total (€)', 'Estado']];
+  const filas = [['Fecha', 'Hora', 'Mesa', 'Platos', 'Unidades', 'Total (€)', 'Estado', 'Cobro']];
   [...pedidos].sort((a, b) => a.timestamp.seconds - b.timestamp.seconds).forEach(p => {
     const d = new Date(p.timestamp.seconds * 1000);
     filas.push([
       d.toLocaleDateString('es-ES'), d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
       p.mesa, (p.items || []).map(i => i.qty + '× ' + i.nombre).join(', '),
-      (p.items || []).reduce((a, i) => a + (Number(i.qty) || 0), 0), num(p.total), ESTADO_LABEL[p.estado] || p.estado
+      (p.items || []).reduce((a, i) => a + (Number(i.qty) || 0), 0), num(p.total), ESTADO_LABEL[p.estado] || p.estado,
+      cobrado(p) ? ('Cobrado ' + (p.metodoPago || '')).trim() : (p.estado === 'cancelado' ? '' : 'Sin cobrar')
     ]);
   });
   const csv = '﻿' + filas.map(f => f.map(cel).join(';')).join('\r\n');

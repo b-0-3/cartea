@@ -265,6 +265,7 @@
 <div class="actions-bar" id="actionsBar">
   <button class="action-btn" id="btnCamarero">🔔 <span data-t="callWaiter">Llamar camarero</span></button>
   <button class="action-btn" id="btnCuenta">🧾 <span data-t="askBill">Pedir cuenta</span></button>
+  <button class="action-btn" id="btnCarbon" style="display:none">🔥 <span data-t="coal">Cambiar carbón</span></button>
 </div>
 
 <button class="cart-fab hidden" id="cartBtn">
@@ -303,7 +304,7 @@ const T = {
     yourOrder:'Tu pedido', confirm:'Confirmar pedido →', sending:'Enviando pedido...',
     notePh:'Notas para cocina (alergias, sin gluten...)', added:'Añadido ✓',
     sent:'✅ Pedido enviado a cocina', error:'❌ Error. Inténtalo de nuevo.',
-    waiterOk:'🔔 Camarero en camino...', billOk:'🧾 Cuenta solicitada',
+    waiterOk:'🔔 Camarero en camino...', billOk:'🧾 Cuenta solicitada', coal:'Cambiar carbón', coalOk:'🔥 Ahora te cambian el carbón',
     wait:'Ya hemos avisado. Espera un momento 🙂', soldOut:'Agotado', perUnit:'/ud',
     empty:'El restaurante aún no ha añadido platos.', badQr:'QR no válido',
     badQrSub:'Pide al personal un nuevo código QR.', noConn:'No se pudo conectar',
@@ -320,7 +321,7 @@ const T = {
     yourOrder:'Your order', confirm:'Place order →', sending:'Sending order...',
     notePh:'Notes for the kitchen (allergies, gluten free...)', added:'Added ✓',
     sent:'✅ Order sent to the kitchen', error:'❌ Error. Please try again.',
-    waiterOk:'🔔 A waiter is on the way...', billOk:'🧾 Bill requested',
+    waiterOk:'🔔 A waiter is on the way...', billOk:'🧾 Bill requested', coal:'Change coal', coalOk:'🔥 Your coal is on the way',
     wait:'We already let them know. One moment please 🙂', soldOut:'Sold out', perUnit:'/each',
     empty:'This restaurant has not added any dishes yet.', badQr:'Invalid QR code',
     badQrSub:'Please ask the staff for a new QR code.', noConn:'Could not connect',
@@ -427,6 +428,7 @@ function iniciarDemo() {
   banner.innerHTML = 'MODO DEMO · Así verán la carta tus clientes. Prueba a pedir: el pedido "llega a cocina" y vuelve listo. <a href="index.html" style="color:var(--ink)">Conoce Cartéa →</a>';
   document.body.insertBefore(banner, document.body.firstChild);
   configurarIdioma();
+  activarCarbon();
   renderMenu(); hideLoader();
 }
 function pedidoDemo(items, total) {
@@ -450,6 +452,7 @@ else ensureAuth().then(async (user) => {
 
   if (resto.activo === false) { fullScreenMsg(t('closed'), t('closedSub')); return; }
   configurarIdioma();
+  activarCarbon();
 
   onSnapshot(collection(db, 'restaurantes', uid, 'menu'), s => {
     menuItems = [];
@@ -668,6 +671,13 @@ async function enviarAviso(tipo, okMsg) {
 }
 document.getElementById('btnCamarero').addEventListener('click', () => enviarAviso('camarero', t('waiterOk')));
 document.getElementById('btnCuenta').addEventListener('click', () => enviarAviso('cuenta', t('billOk')));
+document.getElementById('btnCarbon').addEventListener('click', () => enviarAviso('carbon', t('coalOk')));
+/* Locales de cachimbas: botón extra de "Cambiar carbón" (se activa en Configuración) */
+function activarCarbon() {
+  if (!resto || !resto.avisoCarbon) return;
+  document.getElementById('btnCarbon').style.display = '';
+  document.getElementById('actionsBar').style.gridTemplateColumns = '1fr 1fr 1fr';
+}
 
 function showToast(msg) {
   const el = document.getElementById('toast');

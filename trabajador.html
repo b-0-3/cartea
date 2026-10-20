@@ -185,6 +185,12 @@
     .aviso-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
     .aviso-card.camarero::before{background:var(--rust);}
     .aviso-card.cuenta::before{background:var(--gold);}
+    .aviso-card.carbon::before{background:#e8622c;}
+    .cobro-box{background:var(--gold-bg);border:1px solid rgba(200,150,62,.35);border-radius:8px;padding:.8rem 1rem;margin-top:.8rem;}
+    .cobro-total{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:900;}
+    .cobro-btns{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.6rem;}
+    .cobro-btns button{padding:.85rem .5rem;border-radius:6px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:.9rem;cursor:pointer;font-family:'DM Sans',sans-serif;}
+    .cobro-row{display:flex;align-items:center;gap:.8rem;padding:.8rem 1.1rem;border-bottom:1px solid var(--border);}
     .aviso-label{font-weight:600;font-size:.875rem;}
     .aviso-sub{font-size:.72rem;color:var(--muted);margin-top:.1rem;}
 
@@ -514,6 +520,11 @@
     </div>
 
     <div class="card">
+      <div class="card-hd"><div class="card-title">💶 Mesas por cobrar</div></div>
+      <div class="card-body p0" id="cam-cobrar-list"></div>
+    </div>
+
+    <div class="card">
       <div class="card-hd"><div class="card-title">Pedidos listos para servir</div></div>
       <div class="card-body p0" id="cam-listos-list"><div class="empty" style="padding:1.5rem"><div class="empty-icon">✅</div><strong>Sin pedidos listos</strong></div></div>
     </div>
@@ -604,7 +615,7 @@
 <script type="module">
 import { doc, getDoc, collection, onSnapshot, updateDoc, deleteDoc, setDoc, writeBatch, query, where, serverTimestamp, Timestamp }
   from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { db, ensureAuth, escapeHtml, eur, horaDe, inicioJornada, alCambiarJornada, pinHash, esDeBarra, usaBarra, ESTADOS_ACTIVOS, ESTADO_LABEL, mesasEfectivas }
+import { db, ensureAuth, escapeHtml, eur, horaDe, inicioJornada, alCambiarJornada, pinHash, esDeBarra, usaBarra, ESTADOS_ACTIVOS, ESTADO_LABEL, mesasEfectivas, cobrado, porCobrar, AVISO_LABEL }
   from './js/common.js';
 
 /* ── uid del restaurante (viene en el enlace) ── */
@@ -771,7 +782,7 @@ function initListeners() {
     unsubJornada = onSnapshot(query(pedidosRef, where('timestamp','>=', Timestamp.fromDate(inicioJornada()))), snap => {
       pedidosJornada = [];
       snap.forEach(d=>pedidosJornada.push({id:d.id,...d.data()}));
-      if (rolActual()==='encargado') renderRoleView();
+      if (['encargado','camarero'].includes(rolActual())) renderRoleView();
     }, ()=>showConnError());
   };
   suscribirJornada();
@@ -785,7 +796,7 @@ function initListeners() {
     const ids = new Set(allAvisos.map(a=>a.id));
     if (avisosVistos && ['camarero','encargado'].includes(rolActual())) {
       const nuevo = allAvisos.find(a => !avisosVistos.has(a.id));
-      if (nuevo) alertar(nuevo.tipo==='cuenta' ? `🧾 Mesa ${nuevo.mesa} pide la cuenta` : `🔔 Mesa ${nuevo.mesa} llama al camarero`);
+      if (nuevo) alertar(`Mesa ${nuevo.mesa}: ${(AVISO_LABEL[nuevo.tipo] || '🔔 Aviso').replace(/^\S+\s/, '').toLowerCase()}`);
     }
     avisosVistos = ids;
     if (currentWorker) renderRoleView();
@@ -1126,7 +1137,7 @@ function mesaTiles(gridId) {
   for (let i=1;i<=n;i++) {
     const m = String(i);
     const oc = ocupadas.has(m);
-    const flags = (conAviso.has(m)?'🔔':'') + (!estaLimpia(m)?'🧹':'');
+    const flags = (conAviso.has(m)?'🔔':'') + (porCobrarMesa(m).length?'💶':'') + (!estaLimpia(m)?'🧹':'');
     html += `<div class="mesa-tile tap ${oc?'activa':''} ${conAviso.has(m)?'aviso':''}" data-mesa="${m}">
       <div class="mesa-num">${i}</div><div class="mesa-tag">Mesa</div>
       <div class="mesa-dot ${oc?'activa':''}"></div><div class="mesa-flags">${flags}</div></div>`;
@@ -1134,14 +1145,38 @@ function mesaTiles(gridId) {
   grid.innerHTML = html;
 }
 
+function porCobrarMesa(m) {
+  // Lo que se ha pedido hoy en esa mesa y aún no se ha cobrado
+  return pedidosJornada.filter(p => String(p.mesa) === String(m) && porCobrar(p));
+}
+function totalDe(lista) { return lista.reduce((s,p)=>s+(Number(p.total)||0),0); }
+
 function avisoCard(a, corto) {
+  const label = AVISO_LABEL[a.tipo] || '🔔 Aviso';
+  const icono = label.split(' ')[0];
+  const cobrar = a.tipo === 'cuenta' && porCobrarMesa(a.mesa).length
+    ? `<button class="btn-sm btn-gold-sm" data-act="abrir-mesa" data-mesa="${escapeHtml(a.mesa)}">💶 Cobrar</button>` : '';
   return `<div class="aviso-card ${escapeHtml(a.tipo)}">
     <div>
-      <div class="aviso-label">${a.tipo==='camarero'?(corto?'🔔':'🔔 Llamada'):(corto?'🧾':'🧾 Cuenta')} — Mesa ${escapeHtml(a.mesa)}</div>
+      <div class="aviso-label">${corto ? icono : escapeHtml(label)} — Mesa ${escapeHtml(a.mesa)}</div>
       <div class="aviso-sub">${horaDe(a.timestamp)}</div>
     </div>
-    <button class="btn-sm btn-success-sm" data-act="aviso-ok" data-id="${escapeHtml(a.id)}">✓${corto?'':' Atendido'}</button>
+    <div style="display:flex;gap:.3rem">${cobrar}<button class="btn-sm btn-success-sm" data-act="aviso-ok" data-id="${escapeHtml(a.id)}">✓${corto?'':' Atendido'}</button></div>
   </div>`;
+}
+
+function renderPorCobrar(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const mesas = [...new Set(pedidosJornada.filter(porCobrar).map(p => String(p.mesa)))].sort((a,b)=>a-b);
+  el.innerHTML = mesas.length ? mesas.map(m => {
+    const l = porCobrarMesa(m);
+    return `<div class="cobro-row">
+      <div style="flex:1"><b>Mesa ${escapeHtml(m)}</b> <span style="font-size:.75rem;color:var(--muted)">· ${l.length} pedido${l.length>1?'s':''}</span></div>
+      <b style="font-family:'Playfair Display',serif">${eur(totalDe(l))}</b>
+      <button class="btn-sm btn-gold-sm" data-act="abrir-mesa" data-mesa="${escapeHtml(m)}">💶 Cobrar</button>
+    </div>`;
+  }).join('') : '<div class="empty" style="padding:1.2rem"><div class="empty-icon">💶</div><strong>Nada por cobrar</strong></div>';
 }
 
 function renderCamarero() {
@@ -1157,6 +1192,7 @@ function renderCamarero() {
   } else { strip.style.display='none'; }
 
   mesaTiles('cam-mesas-grid');
+  renderPorCobrar('cam-cobrar-list');
 
   const al = document.getElementById('cam-avisos-list');
   al.innerHTML = allAvisos.length
@@ -1187,7 +1223,7 @@ document.getElementById('cam-clearAllAvisos').addEventListener('click', borrarTo
 function renderEncargado() {
   const validos = pedidosJornada.filter(p=>p.estado!=='cancelado');
   const completados = validos.filter(p=>p.estado==='completado');
-  const ventas = validos.reduce((s,p)=>s+(Number(p.total)||0),0);
+  const ventas = totalDe(pedidosJornada.filter(cobrado));   // solo lo ya cobrado cuenta como venta
 
   document.getElementById('enc-activos').textContent     = pedidosActivos.length;
   document.getElementById('enc-completados').textContent = completados.length;
@@ -1265,12 +1301,22 @@ function pintarMesa(m) {
   document.getElementById('ms-sub').textContent =
     (pedidos.length ? pedidos.length + ' pedido' + (pedidos.length>1?'s':'') + ' en curso' : 'Sin pedidos en curso') + ' · ' + (limpia ? 'limpia' : 'por limpiar');
   let html = '';
-  if (avisos.length) html += avisos.map(a=>`<div class="mesa-sheet-row"><span>${a.tipo==='cuenta'?'🧾 Pide la cuenta':'🔔 Llama al camarero'} · ${horaDe(a.timestamp)}</span><button class="btn-sm btn-success-sm" data-act="aviso-ok" data-id="${escapeHtml(a.id)}">✓ Atendido</button></div>`).join('');
+  if (avisos.length) html += avisos.map(a=>`<div class="mesa-sheet-row"><span>${escapeHtml(AVISO_LABEL[a.tipo]||'🔔 Aviso')} · ${horaDe(a.timestamp)}</span><button class="btn-sm btn-success-sm" data-act="aviso-ok" data-id="${escapeHtml(a.id)}">✓ Atendido</button></div>`).join('');
   if (pedidos.length) html += pedidos.map(p=>{
     const tipo = paraServir(p);
     return `<div class="mesa-sheet-row"><span style="min-width:0;flex:1"><b>${escapeHtml(ESTADO_LABEL[p.estado]||p.estado)}</b>${p.barraLista?' · 🍺 bebidas listas':''} · <span style="color:var(--muted)">${escapeHtml(itemsTexto(p))}</span></span>${tipo?`<button class="btn-sm btn-success-sm" data-act="${SERVIR[tipo].act}" data-id="${escapeHtml(p.id)}">✓ ${tipo==='todo'?'Servido':tipo==='platos'?'Platos':'Bebidas'}</button>`:`<span style="font-size:.75rem;color:var(--muted)">${horaDe(p.timestamp)}</span>`}</div>`;
   }).join('');
-  if (!avisos.length && !pedidos.length) html += '<div class="empty" style="padding:1rem"><div class="empty-icon">👌</div><strong>Nada pendiente en esta mesa</strong></div>';
+  const pendientesCobro = porCobrarMesa(m);
+  if (!avisos.length && !pedidos.length && !pendientesCobro.length) html += '<div class="empty" style="padding:1rem"><div class="empty-icon">👌</div><strong>Nada pendiente en esta mesa</strong></div>';
+  if (pendientesCobro.length) html += `<div class="cobro-box">
+    <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Por cobrar</div>
+    <div class="cobro-total">${eur(totalDe(pendientesCobro))}</div>
+    <div style="font-size:.75rem;color:var(--muted)">${escapeHtml(pendientesCobro.map(p=>itemsTexto(p, ', ')).join(' · '))}</div>
+    <div class="cobro-btns">
+      <button data-act="cobrar" data-mesa="${escapeHtml(m)}" data-metodo="efectivo">💶 Efectivo</button>
+      <button data-act="cobrar" data-mesa="${escapeHtml(m)}" data-metodo="tarjeta">💳 Tarjeta</button>
+    </div>
+  </div>`;
   html += `<div class="mesa-sheet-actions">
     <button class="ok" data-act="mesa-atendida" data-mesa="${escapeHtml(m)}" ${avisos.length?'':'disabled style="opacity:.5"'}>✓ Mesa atendida</button>
     <button data-act="mesa-limpieza" data-mesa="${escapeHtml(m)}">${limpia?'🧹 Marcar para limpiar':'✓ Ya está limpia'}</button>
@@ -1329,6 +1375,28 @@ document.body.addEventListener('click', async e => {
         allAvisos.filter(a=>String(a.mesa)===m).forEach(a=>batch.delete(doc(db,'restaurantes',uid,'avisos',a.id)));
         await batch.commit();
         toast(`Mesa ${m} atendida ✓`,'success');
+        break;
+      }
+      case 'abrir-mesa':
+        abrirMesa(b.dataset.mesa);
+        break;
+      case 'cobrar': {
+        // La mesa ha pagado (en el local): sus pedidos pasan a ser venta,
+        // se quitan sus avisos y la mesa queda para limpiar.
+        const m = b.dataset.mesa;
+        const lista = porCobrarMesa(m);
+        if (!lista.length) break;
+        const total = totalDe(lista);
+        const batch = writeBatch(db);
+        lista.forEach(p => batch.update(doc(db,'restaurantes',uid,'pedidos',p.id), {
+          pagado: true, pagadoEn: serverTimestamp(), metodoPago: b.dataset.metodo,
+          ...(ESTADOS_ACTIVOS.includes(p.estado) ? { estado: 'completado' } : {})
+        }));
+        allAvisos.filter(a=>String(a.mesa)===m).forEach(a=>batch.delete(doc(db,'restaurantes',uid,'avisos',a.id)));
+        batch.set(doc(db,'restaurantes',uid,'mesasEstado',m), { limpia:false, actualizado: serverTimestamp() });
+        await batch.commit();
+        toast(`Mesa ${m} cobrada: ${eur(total)} ✓`, 'success');
+        cerrarMesa();
         break;
       }
       case 'mesa-limpieza': {

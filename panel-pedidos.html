@@ -80,6 +80,10 @@
       </div>
     </div>
     <div class="card">
+      <div class="card-hd"><div><div class="card-title">💶 Mesas por cobrar</div><div class="card-sub">Cuando la mesa paga en el local, márcalo aquí (o lo hace el camarero desde su móvil)</div></div></div>
+      <div class="card-body p0" id="cobrarList"></div>
+    </div>
+    <div class="card">
       <div class="card-hd">
         <div><div class="card-title">Pedidos de hoy</div><div class="card-sub" id="hoyResumen">Servidos y cancelados desde las 5:00</div></div>
         <a href="panel-ventas.html" class="btn-ghost btn-sm">Ver ventas →</a>
@@ -93,9 +97,9 @@
 <script type="module">
 
 import { initPanel, db } from './js/panel-core.js';
-import { collection, onSnapshot, doc, updateDoc, query, where, serverTimestamp, Timestamp }
+import { collection, onSnapshot, doc, updateDoc, writeBatch, query, where, serverTimestamp, Timestamp }
   from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { escapeHtml, eur, horaDe, inicioJornada, alCambiarJornada, ESTADOS_ACTIVOS, AUTO_COMPLETAR_MIN } from './js/common.js';
+import { escapeHtml, eur, horaDe, inicioJornada, alCambiarJornada, ESTADOS_ACTIVOS, AUTO_COMPLETAR_MIN, cobrado, porCobrar } from './js/common.js';
 
 let uid = null;
 let activos = [];
@@ -145,6 +149,20 @@ function render() {
   renderCol('col-preparando', preparando, 'preparando');
   renderCol('col-listo', listo, 'listo');
 
+  // Por cobrar, agrupado por mesa
+  const pend = jornada.filter(porCobrar);
+  const mesas = [...new Set(pend.map(p => String(p.mesa)))].sort((a,b) => a - b);
+  document.getElementById('cobrarList').innerHTML = mesas.length ? mesas.map(m => {
+    const l = pend.filter(p => String(p.mesa) === m);
+    const tot = l.reduce((a,p) => a + (Number(p.total)||0), 0);
+    return `<div style="display:flex;align-items:center;gap:.7rem;padding:.75rem 1.2rem;border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <div style="flex:1;min-width:140px"><b>Mesa ${escapeHtml(m)}</b> <span style="font-size:.75rem;color:var(--muted)">· ${l.length} pedido${l.length>1?'s':''}</span></div>
+      <b style="font-family:'Playfair Display',serif;font-size:1.05rem">${eur(tot)}</b>
+      <button class="btn-sm btn-success-sm" data-cobrar="${escapeHtml(m)}" data-metodo="efectivo">💶 Efectivo</button>
+      <button class="btn-sm btn-success-sm" data-cobrar="${escapeHtml(m)}" data-metodo="tarjeta">💳 Tarjeta</button>
+    </div>`;
+  }).join('') : '<div class="empty" style="padding:1.2rem"><div class="empty-icon">💶</div><strong>Nada por cobrar</strong></div>';
+
   const cerrados = jornada.filter(p => p.estado === 'completado' || p.estado === 'cancelado')
     .sort((a,b) => (b.timestamp?.seconds||0) - (a.timestamp?.seconds||0));
   const servidos = cerrados.filter(p => p.estado === 'completado');
@@ -160,7 +178,7 @@ function render() {
         <td style="font-size:.78rem;color:var(--muted)">${escapeHtml((p.items||[]).map(i=>`${i.qty}× ${i.nombre}`).join(', '))}</td>
         <td style="font-family:'Playfair Display',serif;font-weight:700;color:var(--green);white-space:nowrap;${p.estado==='cancelado'?'text-decoration:line-through':''}">${eur(p.total)}</td>
         <td style="font-size:.75rem;color:var(--muted)">${horaDe(p.timestamp)}</td>
-        <td style="font-size:.7rem;color:var(--muted)">${p.estado==='cancelado'?'Cancelado':''}</td>
+        <td style="font-size:.7rem;font-weight:600;color:${cobrado(p)?'var(--green)':'var(--rust)'}">${p.estado==='cancelado'?'Cancelado':cobrado(p)?'Cobrado'+(p.metodoPago==='tarjeta'?' 💳':' 💶'):'Sin cobrar'}</td>
       </tr>`).join('') + '</tbody></table></div>';
 }
 
@@ -172,9 +190,21 @@ async function cambiarEstado(id, estado) {
   catch (e) { showToast('No se pudo actualizar', 'error'); }
 }
 
-document.querySelector('.main').addEventListener('click', e => {
+document.querySelector('.main').addEventListener('click', async e => {
   const b = e.target.closest('[data-estado]');
-  if (b) cambiarEstado(b.dataset.id, b.dataset.estado);
+  if (b) { cambiarEstado(b.dataset.id, b.dataset.estado); return; }
+  const c = e.target.closest('[data-cobrar]');
+  if (!c) return;
+  const m = c.dataset.cobrar;
+  const l = jornada.filter(p => porCobrar(p) && String(p.mesa) === m);
+  if (!l.length) return;
+  const batch = writeBatch(db);
+  l.forEach(p => batch.update(doc(db,'restaurantes',uid,'pedidos',p.id), {
+    pagado: true, pagadoEn: serverTimestamp(), metodoPago: c.dataset.metodo,
+    ...(ESTADOS_ACTIVOS.includes(p.estado) ? { estado: 'completado' } : {})
+  }));
+  try { await batch.commit(); showToast(`Mesa ${m} cobrada ✓`, 'success'); }
+  catch (err) { showToast('No se pudo guardar', 'error'); }
 });
 
 initPanel().then(({ uid: u }) => {

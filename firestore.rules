@@ -23,19 +23,23 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/restaurantes/$(restId)).data.get('activo', true) != false;
     }
     function mesaValida(m) { return m is string && m.matches('^[0-9]{1,4}$'); }
+    // Tú (el dueño de Cartéa): puedes ver todos los restaurantes y cambiarles el plan.
+    function isAdmin() {
+      return conEmail() && request.auth.token.email == 'tborjaesponja@gmail.com';
+    }
 
     match /restaurantes/{restId} {
       // Básico: hasta 5 mesas. Pro: hasta 200.
       function validMesas(antes) {
         let m = request.resource.data.get('mesas', 5);
-        let pro = antes != null && antes.get('plan', 'basico') == 'pro';
+        let pro = antes != null && antes.get('plan', 'basico') in ['pro', 'prueba'];
         return m is int && m >= 1 && (m <= 5 || (pro && m <= 200));
       }
 
       // Se puede abrir UN restaurante si se conoce su id (viene en el QR),
       // pero nadie puede sacar la LISTA de todos los restaurantes.
       allow get: if signedIn();
-      allow list: if false;
+      allow list: if isAdmin();
 
       // Al registrarse (con email, no anónimo): siempre empieza en plan Básico y activo.
       allow create: if isOwner(restId) && conEmail()
@@ -45,9 +49,10 @@ service cloud.firestore {
 
       // El dueño edita sus datos, pero NO puede tocarse el plan ni el
       // estado de la cuenta (eso lo cambias tú a mano en la consola).
-      allow update: if isOwner(restId)
-        && !changed().hasAny(['plan', 'activo', 'uid', 'creadoEn'])
-        && (!changed().hasAny(['mesas']) || validMesas(resource.data));
+      allow update: if (isOwner(restId)
+        && !changed().hasAny(['plan', 'activo', 'uid', 'creadoEn', 'pruebaHasta'])
+        && (!changed().hasAny(['mesas']) || validMesas(resource.data)))
+        || isAdmin();
 
       allow delete: if false;
 
@@ -77,7 +82,7 @@ service cloud.firestore {
 
         // Cocina / barra / equipo / dueño solo pueden cambiar el estado.
         allow update: if signedIn()
-          && changed().hasOnly(['estado', 'listoEn', 'retiradoCocina', 'barraLista', 'bebidasServidas', 'platosServidos'])
+          && changed().hasOnly(['estado', 'listoEn', 'retiradoCocina', 'barraLista', 'bebidasServidas', 'platosServidos', 'pagado', 'pagadoEn', 'metodoPago'])
           && request.resource.data.estado in ['nuevo','preparando','listo','completado','cancelado'];
 
         // Borrar pedidos (historial) solo el dueño.
@@ -89,7 +94,7 @@ service cloud.firestore {
         allow read: if signedIn();
         allow create: if signedIn()
           && request.resource.data.keys().hasOnly(['mesa','tipo','timestamp','cliente'])
-          && request.resource.data.tipo in ['camarero', 'cuenta']
+          && request.resource.data.tipo in ['camarero', 'cuenta', 'carbon']
           && mesaValida(request.resource.data.mesa)
           && request.resource.data.cliente == request.auth.uid
           && request.resource.data.timestamp == request.time

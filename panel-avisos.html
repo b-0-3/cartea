@@ -66,7 +66,7 @@
       <div class="page-sub">Llamadas al camarero y solicitudes de cuenta</div>
     </div>
     <div class="stats-grid" id="avisosStats">
-      <div class="stat-card rust"><div class="stat-icon">🔔</div><div class="stat-label">Llamadas camarero</div><div class="stat-val" id="av-camareros">0</div></div>
+      <div class="stat-card rust"><div class="stat-icon">🔔</div><div class="stat-label">Llamadas (camarero / carbón)</div><div class="stat-val" id="av-camareros">0</div></div>
       <div class="stat-card gold"><div class="stat-icon">🧾</div><div class="stat-label">Peticiones de cuenta</div><div class="stat-val" id="av-cuentas">0</div></div>
       <div class="stat-card"><div class="stat-icon">⏱</div><div class="stat-label">Total pendientes</div><div class="stat-val" id="av-total">0</div></div>
     </div>
@@ -87,7 +87,7 @@
 import { initPanel, db } from './js/panel-core.js';
 import { collection, onSnapshot, doc, deleteDoc, writeBatch }
   from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { escapeHtml, horaDe } from './js/common.js';
+import { escapeHtml, horaDe, AVISO_LABEL } from './js/common.js';
 
 let uid = null;
 let allAvisos = [];
@@ -99,7 +99,7 @@ function hace(ts) {
 }
 
 function render() {
-  document.getElementById('av-camareros').textContent = allAvisos.filter(a => a.tipo==='camarero').length;
+  document.getElementById('av-camareros').textContent = allAvisos.filter(a => a.tipo!=='cuenta').length;
   document.getElementById('av-cuentas').textContent = allAvisos.filter(a => a.tipo==='cuenta').length;
   document.getElementById('av-total').textContent = allAvisos.length;
 
@@ -109,7 +109,7 @@ function render() {
     : allAvisos.map(a => `
       <div class="aviso ${a.tipo==='cuenta'?'cuenta':'camarero'}">
         <div>
-          <div class="aviso-label">${a.tipo==='camarero'?'🔔 Llamada al camarero':'🧾 Solicitud de cuenta'} — Mesa ${escapeHtml(a.mesa)}</div>
+          <div class="aviso-label">${escapeHtml(AVISO_LABEL[a.tipo] || '🔔 Aviso')} — Mesa ${escapeHtml(a.mesa)}</div>
           <div class="aviso-time">${horaDe(a.timestamp)} · ${hace(a.timestamp)}</div>
         </div>
         <button class="btn-sm btn-success-sm" data-ok="${escapeHtml(a.id)}">✓ Atendido</button>
